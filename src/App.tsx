@@ -966,6 +966,36 @@ export default function App() {
     showToast('🏆 Kỳ thi hoàn thành! Đã cập nhật thành tích lên bảng vinh danh khoa!', 'success');
   };
 
+  const handleDeleteLeaderboardEntry = (id: string) => {
+    setDialogConfig({
+      title: "Xác nhận xóa thành tích",
+      message: "Bạn có chắc chắn muốn xóa học sinh này khỏi bảng xếp hạng vinh danh không? Hành động này không thể hoàn tác.",
+      onCancel: () => setDialogConfig(null),
+      onConfirm: async () => {
+        setDialogConfig(null);
+        try {
+          const updatedLeaderboard = leaderboard.filter(item => item.id !== id)
+            .map((item, index) => ({ ...item, rank: index + 1 }));
+          setLeaderboard(updatedLeaderboard);
+          localStorage.setItem('quizmaster_leaderboard', JSON.stringify(updatedLeaderboard));
+
+          const res = await fetch(`/api/leaderboard/${id}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            showToast("Đã xóa học sinh khỏi bảng vinh danh thành công! 🎉", "success");
+          } else {
+            // Just warning client, but keep local deletion anyway
+            showToast("Xóa cục bộ thành công! Có một lỗi nhỏ khi xóa trên Supabase.", "info");
+          }
+        } catch (e) {
+          console.error(e);
+          showToast("Đã xóa học sinh trên trình duyệt! Việc đồng bộ máy chủ bị gián đoạn.", "info");
+        }
+      }
+    });
+  };
+
   const handleAddOption = () => {
     setNewQuestion(prev => ({
       ...prev,
@@ -1917,6 +1947,7 @@ export default function App() {
                         <th className="p-3">Đơn Vị Trường Lớp</th>
                         <th className="p-3 text-center">Thời Gian</th>
                         <th className="p-3 text-right pr-5">Điểm Số</th>
+                        <th className="p-3 text-center w-20">Xóa</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -1935,11 +1966,21 @@ export default function App() {
                           <td className="p-3 text-slate-500 text-[11px]">{item.class}</td>
                           <td className="p-3 text-center text-slate-400 text-[11px] font-mono">{item.time}</td>
                           <td className="p-3 text-right pr-5 text-indigo-600 font-extrabold text-sm font-mono">{item.score}đ</td>
+                          <td className="p-3 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteLeaderboardEntry(item.id)}
+                              className="text-rose-600 hover:text-rose-800 p-1.5 rounded-lg hover:bg-rose-50 transition-colors inline-flex items-center justify-center"
+                              title="Xóa học sinh này khỏi bảng vinh danh"
+                            >
+                              <Trash className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                       {filteredLeaderboard.length === 0 && (
                         <tr>
-                          <td colSpan="5" className="p-8 text-center text-slate-400 italic">Chưa có kết quả vinh danh ghi nhận khối thi này.</td>
+                          <td colSpan={6} className="p-8 text-center text-slate-400 italic">Chưa có kết quả vinh danh ghi nhận khối thi này.</td>
                         </tr>
                       )}
                     </tbody>

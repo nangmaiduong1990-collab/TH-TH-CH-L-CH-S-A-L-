@@ -460,6 +460,24 @@ app.post("/api/leaderboard", async (req, res) => {
   res.json({ success: true });
 });
 
+app.delete("/api/leaderboard/:id", async (req, res) => {
+  const { id } = req.params;
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error } = await client.from("leaderboard").delete().eq("id", id);
+      if (!error) {
+        return res.json({ success: true });
+      }
+    } catch (_) {}
+  }
+
+  const local = loadLocalDb();
+  local.leaderboard = local.leaderboard.filter((item: any) => item.id !== id);
+  saveLocalDb(local);
+  res.json({ success: true });
+});
+
 // EXAM ROOMS ENDPOINTS
 app.get("/api/exam-rooms", async (req, res) => {
   const client = getSupabaseClient();
