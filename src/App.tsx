@@ -258,7 +258,7 @@ export default function App() {
     grade: '6',
     type: 'SINGLE',
     mixQuestions: true,
-    classMode: 'none', // 'none' for "Chưa có lớp", 'profile' for profile, 'supplemental' for subClass
+    classMode: 'supplemental', // default to direct sub-class list selection
     subClass: '6/1'
   });
 
@@ -832,17 +832,10 @@ export default function App() {
     const finalQuestions = list.slice(0, 15);
 
     // Get candidate selected class mode
-    let targetClassLabel = "";
-    if (practiceConfig.classMode === 'none') {
-      targetClassLabel = `Khối ${practiceConfig.grade} (Chưa có lớp)`;
-    } else if (practiceConfig.classMode === 'profile') {
-      targetClassLabel = userData.grade || `Lớp ${practiceConfig.grade}`;
-    } else {
-      targetClassLabel = `Lớp ${practiceConfig.subClass || `${practiceConfig.grade}/1`}`;
-    }
+    const targetClassLabel = `Lớp ${practiceConfig.subClass || `${practiceConfig.grade}/1`}`;
 
     setActiveExam({
-      title: `Phòng Luyện Lịch sử & Địa lí - Khối ${practiceConfig.grade} (${practiceConfig.classMode === 'none' ? 'Chưa xếp lớp' : 'Có xếp lớp'})`,
+      title: `Phòng Luyện Lịch sử & Địa lí - Khối ${practiceConfig.grade} (${targetClassLabel})`,
       questionsList: finalQuestions,
       currentIdx: 0,
       answers: {},
@@ -1691,7 +1684,14 @@ export default function App() {
                         <button
                           key={g}
                           type="button"
-                          onClick={() => setPracticeConfig(prev => ({ ...prev, grade: g, subClass: `${g}/1` }))}
+                          onClick={() => {
+                            const defaults = customClasses[g] || [];
+                            setPracticeConfig(prev => ({ 
+                              ...prev, 
+                              grade: g, 
+                              subClass: defaults[0] || `${g}/1` 
+                            }));
+                          }}
                           className={`py-2 rounded-xl text-xs font-black border transition-all ${practiceConfig.grade === g ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                         >
                           Khối {g}
@@ -1703,7 +1703,7 @@ export default function App() {
                   {/* Class Selection Mode */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="block text-[10px] text-slate-400 font-extrabold uppercase">2. PHÂN LOẠI LỚP HỌC</span>
+                      <span className="block text-[10px] text-slate-400 font-extrabold uppercase">2. CHỌN LỚP ÔN LUYỆN</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1718,64 +1718,27 @@ export default function App() {
                         📂 Nhập lớp Khối {practiceConfig.grade}
                       </button>
                     </div>
-                    <div className="space-y-1 text-xs">
-                      <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-150 bg-slate-50/50 hover:bg-slate-50 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="fastPracticeClassMode"
-                          checked={practiceConfig.classMode === 'none'}
-                          onChange={() => setPracticeConfig(prev => ({ ...prev, classMode: 'none' }))}
-                          className="text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="font-bold text-slate-700">Chưa xếp lớp (Chưa có lớp)</span>
-                        <span className="bg-orange-100 text-orange-850 text-[9px] px-1.5 py-0.5 rounded font-black ml-auto uppercase">Khuyên chọn ⚡</span>
-                      </label>
 
-                      <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-150 bg-slate-50/50 hover:bg-slate-50 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="fastPracticeClassMode"
-                          checked={practiceConfig.classMode === 'profile'}
-                          onChange={() => setPracticeConfig(prev => ({ ...prev, classMode: 'profile' }))}
-                          className="text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="font-bold text-slate-700">Lớp trong hồ sơ: <span className="text-indigo-600 font-black">{userData.grade}</span></span>
-                      </label>
-
-                      <label className="flex items-center gap-2 p-2 rounded-lg border border-slate-150 bg-slate-50/50 hover:bg-slate-50 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="fastPracticeClassMode"
-                          checked={practiceConfig.classMode === 'supplemental'}
-                          onChange={() => setPracticeConfig(prev => ({ ...prev, classMode: 'supplemental' }))}
-                          className="text-indigo-600 focus:ring-indigo-500"
-                        />
-                        <span className="font-bold text-slate-700">Chọn lớp học</span>
-                      </label>
+                    {/* Show list of sub-classes directly */}
+                    <div className="grid grid-cols-4 gap-1 mt-1 border p-2 rounded-xl bg-slate-50 animate-fadeIn">
+                      {(customClasses[practiceConfig.grade] || []).map(cls => (
+                        <button
+                          key={cls}
+                          type="button"
+                          onClick={() => setPracticeConfig(prev => ({ ...prev, subClass: cls }))}
+                          className={`py-1 text-[10.5px] font-extrabold rounded border transition-all ${practiceConfig.subClass === cls ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+                        >
+                          {cls}
+                        </button>
+                      ))}
                     </div>
-
-                    {/* If supplemental class is selected, show list of sub-classes */}
-                    {practiceConfig.classMode === 'supplemental' && (
-                      <div className="grid grid-cols-4 gap-1 mt-1 border p-2 rounded-xl bg-slate-50 animate-fadeIn">
-                        {(customClasses[practiceConfig.grade] || []).map(cls => (
-                          <button
-                            key={cls}
-                            type="button"
-                            onClick={() => setPracticeConfig(prev => ({ ...prev, subClass: cls }))}
-                            className={`py-1 text-[10.5px] font-extrabold rounded border transition-all ${practiceConfig.subClass === cls ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'}`}
-                          >
-                            {cls}
-                          </button>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   <button 
                     onClick={handleStartPractice}
                     className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-extrabold text-xs rounded-xl tracking-wider transition-colors uppercase shadow-md shadow-indigo-100 animate-pulse"
                   >
-                    Bắt đầu làm bài Khối {practiceConfig.grade} {practiceConfig.classMode === 'none' ? '(Chưa xếp lớp)' : `(${practiceConfig.classMode === 'profile' ? userData.grade : `Lớp ${practiceConfig.subClass}`})`} 🚀
+                    Bắt đầu làm bài Khối {practiceConfig.grade} (Lớp {practiceConfig.subClass}) 🚀
                   </button>
                 </div>
 
