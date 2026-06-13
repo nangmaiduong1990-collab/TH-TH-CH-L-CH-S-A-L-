@@ -356,45 +356,56 @@ app.get("/api/questions", async (req, res) => {
 });
 
 app.post("/api/questions", async (req, res) => {
-  const newQuestion = req.body;
-  if (!newQuestion.id) {
-    newQuestion.id = "q_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+  const body = req.body;
+  const isArray = Array.isArray(body);
+  const items = isArray ? body : [body];
+
+  for (const item of items) {
+    if (!item.id) {
+      item.id = "q_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+    }
   }
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      // Upsert
-      const { data, error } = await client.from("questions").upsert({
-        id: newQuestion.id,
-        content: newQuestion.content,
-        grade: newQuestion.grade,
-        category: newQuestion.category,
-        stt: newQuestion.stt,
-        type: newQuestion.type || 'SINGLE',
-        options: newQuestion.options,
-        correctAnswer: newQuestion.correctAnswer,
-        explanation: newQuestion.explanation
-      });
+      const payload = items.map(item => ({
+        id: item.id,
+        content: item.content,
+        grade: item.grade,
+        category: item.category,
+        stt: item.stt,
+        type: item.type || 'SINGLE',
+        options: item.options,
+        correctAnswer: item.correctAnswer,
+        explanation: item.explanation
+      }));
+
+      // Upsert multiple questions in one single call!
+      const { data, error } = await client.from("questions").upsert(payload);
 
       if (!error) {
-        return res.json({ success: true, id: newQuestion.id });
+        return res.json({ success: true, ids: items.map(i => i.id) });
       } else {
-        console.error("Supabase upsert question error:", error);
+        console.error("Supabase upsert questions error:", error);
       }
-    } catch (e) {}
+    } catch (e: any) {
+      console.error("Supabase exception during insert:", e);
+    }
   }
 
   // Backup to local db
   const local = loadLocalDb();
-  const index = local.questions.findIndex((q: any) => q.id === newQuestion.id);
-  if (index >= 0) {
-    local.questions[index] = newQuestion;
-  } else {
-    local.questions.unshift(newQuestion);
+  for (const item of items) {
+    const index = local.questions.findIndex((q: any) => q.id === item.id);
+    if (index >= 0) {
+      local.questions[index] = item;
+    } else {
+      local.questions.unshift(item);
+    }
   }
   saveLocalDb(local);
-  res.json({ success: true, id: newQuestion.id });
+  res.json({ success: true, ids: items.map(i => i.id) });
 });
 
 app.delete("/api/questions/:id", async (req, res) => {

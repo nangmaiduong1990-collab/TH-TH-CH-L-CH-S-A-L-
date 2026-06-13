@@ -424,13 +424,11 @@ export default function App() {
           body: JSON.stringify(targetItem)
         });
       } else if (actionType === 'import' && Array.isArray(targetItem)) {
-        for (const item of targetItem) {
-          await fetch('/api/questions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(item)
-          });
-        }
+        await fetch('/api/questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(targetItem)
+        });
       }
       checkSupabaseStatus();
     } catch (err) {
@@ -1288,20 +1286,29 @@ export default function App() {
           if (Array.isArray(imported)) {
             const valid = imported.filter(x => x.content && x.options);
             if (valid.length > 0) {
-              const currentIds = new Set(questions.map(q => q.id));
-              const fresh = valid.map((x, i) => ({
+              const importedMapped = valid.map((x, i) => ({
                 ...x,
                 id: x.id || `imported_${Date.now()}_${i}`
-              })).filter(x => !currentIds.has(x.id));
+              }));
 
-              if (fresh.length === 0) {
-                showToast('Tất cả câu hỏi trong file đã được tích hợp trước đó!', 'warning');
-                return;
+              const currentIds = new Set(questions.map(q => q.id));
+              const duplicates = importedMapped.filter(x => currentIds.has(x.id));
+              const fresh = importedMapped.filter(x => !currentIds.has(x.id));
+
+              // Map current list and overwrite with incoming duplicates or add new ones
+              const qMap = new Map(questions.map(q => [q.id, q]));
+              for (const item of importedMapped) {
+                qMap.set(item.id, item);
               }
+              const next = Array.from(qMap.values());
 
-              const next = [...fresh, ...questions];
-              saveQuestions(next, 'import', fresh);
-              showToast(`📥 Thành công nạp thêm ${fresh.length} câu hỏi mới!`, 'success');
+              saveQuestions(next, 'import', importedMapped);
+              
+              if (duplicates.length > 0) {
+                showToast(`📥 Đã nạp thành công! Ghi đè ${duplicates.length} câu cũ & Thêm ${fresh.length} câu mới.`, 'success');
+              } else {
+                showToast(`📥 Thành công nạp khóa ${fresh.length} câu hỏi mới!`, 'success');
+              }
             } else {
               showToast('Kiểm tra lại cấu trúc file JSON học liệu.', 'error');
             }
