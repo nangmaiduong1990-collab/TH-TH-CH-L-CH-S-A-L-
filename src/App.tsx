@@ -205,10 +205,10 @@ export default function App() {
   const [authTab, setAuthTab] = useState('login');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authForm, setAuthForm] = useState({ 
-    name: 'DƯƠNG THỊ HIỆP', 
-    email: 'admin@quizmaster.com', 
-    password: '123456', 
-    confirmPassword: '123456' 
+    name: 'CÔ DƯƠNG THỊ HIỆP', 
+    email: 'hiepdt.c2binhan@gmail.com', 
+    password: 'nguyentuanhung2010', 
+    confirmPassword: 'nguyentuanhung2010' 
   });
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -230,11 +230,19 @@ export default function App() {
   ]);
   const [newSchoolName, setNewSchoolName] = useState('');
 
-  const [emailWhitelist, setEmailWhitelist] = useState([
-    'hiep.duong@school.edu.vn',
-    'admin@quizmaster.com',
-    'giamsat@school.edu.vn'
-  ]);
+  const [emailWhitelist, setEmailWhitelist] = useState(() => {
+    try {
+      const saved = localStorage.getItem('quizmaster_email_whitelist');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return [
+      'hiepdt.c2binhan@gmail.com',
+      'duonghiep559@gmail.com',
+      'hiep.duong@school.edu.vn',
+      'admin@quizmaster.com',
+      'giamsat@school.edu.vn'
+    ];
+  });
   const [newWhitelistedEmail, setNewWhitelistedEmail] = useState('');
 
   const [viewingRoomConfig, setViewingRoomConfig] = useState(null); 
@@ -557,6 +565,20 @@ export default function App() {
     let expectedPassword = '123456';
     let expectedName = adminProfile.name || 'QUẢN TRỊ VIÊN';
     
+    if (emailLower === 'hiepdt.c2binhan@gmail.com') {
+      expectedPassword = 'nguyentuanhung2010';
+      expectedName = 'CÔ DƯƠNG THỊ HIỆP';
+    } else if (emailLower === 'duonghiep559@gmail.com') {
+      expectedPassword = 'nguyentuanhung';
+      expectedName = 'CÔ DƯƠNG THỊ HIỆP (KHÔI PHỤC)';
+    } else if (emailLower === 'admin@quizmaster.com') {
+      expectedPassword = '123456';
+      expectedName = 'QUẢN TRỊ VIÊN HỆ THỐNG';
+    } else if (emailLower === 'hiep.duong@school.edu.vn') {
+      expectedPassword = '123456';
+      expectedName = 'DƯƠNG THỊ HIỆP';
+    }
+
     // Check if there is a matching user stored in localStorage
     const storedProfileStr = localStorage.getItem('quizmaster_admin_profile');
     if (storedProfileStr) {
@@ -567,10 +589,6 @@ export default function App() {
           expectedName = stored.name;
         }
       } catch (err) {}
-    } else if (emailLower === 'admin@quizmaster.com') {
-      expectedName = 'QUẢN TRỊ VIÊN HỆ THỐNG';
-    } else if (emailLower === 'hiep.duong@school.edu.vn') {
-      expectedName = 'DƯƠNG THỊ HIỆP';
     }
 
     if (authForm.password !== expectedPassword) {
@@ -2435,7 +2453,7 @@ export default function App() {
                             required
                             value={authForm.email}
                             onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
-                            placeholder="admin@quizmaster.com"
+                            placeholder="hiepdt.c2binhan@gmail.com"
                             className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
                           />
                         </div>
@@ -2452,10 +2470,10 @@ export default function App() {
                           />
                         </div>
 
-                        <div className="bg-indigo-50/50 border border-indigo-100 p-3 rounded-xl text-[10px] text-indigo-700 font-medium space-y-1">
-                          <p className="font-extrabold text-[11px] text-indigo-800">💡 Gợi ý tài khoản kiểm thử:</p>
-                          <p>• Email: <strong className="font-mono">admin@quizmaster.com</strong></p>
-                          <p>• Mật khẩu: <strong className="font-mono">123456</strong></p>
+                        <div className="bg-indigo-50/60 border border-indigo-150 p-3.5 rounded-xl text-[10.5px] text-indigo-800 font-semibold space-y-1.5 shadow-sm">
+                          <p className="font-extrabold text-[11px] text-indigo-900 flex items-center gap-1">💡 Tài khoản quản trị & giám thị:</p>
+                          <p>• Admin chính: <strong className="font-mono text-indigo-900 bg-white px-1.5 py-0.5 rounded border border-indigo-100">hiepdt.c2binhan@gmail.com</strong> / <strong className="font-mono text-indigo-900 bg-indigo-100 px-1 py-0.5 rounded">nguyentuanhung2010</strong></p>
+                          <p>• Khôi phục tài khoản: <strong className="font-mono text-indigo-900 bg-white px-1.5 py-0.5 rounded border border-indigo-100">duonghiep559@gmail.com</strong> / <strong className="font-mono text-indigo-900 bg-indigo-100 px-1 py-0.5 rounded">nguyentuanhung</strong></p>
                         </div>
 
                         <button
