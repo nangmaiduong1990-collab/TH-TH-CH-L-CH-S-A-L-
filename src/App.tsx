@@ -2736,6 +2736,31 @@ export default function App() {
 
               {activeAdminTab === 'supabase' && (
                 <div className="space-y-6">
+                  {/* Vercel Deployment & Supabase Persistent Guide */}
+                  <div className="p-5 rounded-2xl border border-indigo-150 bg-indigo-55/10 bg-indigo-50/50 space-y-3.5 shadow-sm">
+                    <h4 className="text-xs font-black text-indigo-950 uppercase tracking-tight flex items-center gap-1.5 leading-none">
+                      💡 Hướng dẫn cứu sống dữ liệu đề khi đưa lên Vercel
+                    </h4>
+                    <p className="text-xs text-indigo-900 leading-normal">
+                      Khi lưu đề câu hỏi mà thấy trên Vercel không thay đổi, đó là do hệ thống lưu trữ tạm thời (Local DB) của Vercel chạy dưới dạng Serverless <strong>sẽ tự động khôi phục và xóa tài liệu</strong> sau vài phút hoạt động. Bạn cần liên kết hệ thống với dịch vụ cơ sở dữ liệu vĩnh cửu <strong>Supabase</strong> theo các bước tự động hóa sau:
+                    </p>
+                    <div className="text-xs text-indigo-950 space-y-2 bg-white/90 p-4 rounded-xl border border-indigo-100 font-semibold shadow-inner">
+                      <p className="font-extrabold text-[12px] text-indigo-900 flex items-center gap-1 leading-none">⚙️ Chỉ mất 2 phút thiết lập:</p>
+                      <p className="pl-1">• <strong>Bước 1:</strong> Đăng ký tài khoản miễn phí tại <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">supabase.com</a> và bấm Tạo mới Dự án (New Project).</p>
+                      <p className="pl-1">• <strong>Bước 2:</strong> Copy mã SQL đen mờ ở cuối trang này, bấm vào phần <strong>SQL Editor</strong> tại thanh điều hướng trái của Supabase và bấm <strong>Run</strong> để tạo bảng.</p>
+                      <p className="pl-1">• <strong>Bước 3:</strong> Vào bảng điều khiển của <strong>Vercel (Vercel Dashboard) &gt; Settings &gt; Environment Variables</strong> của dự án, rồi thêm hai (2) biến môi trường sau:</p>
+                      
+                      <div className="pl-4 font-mono text-[10.5px] space-y-1.5 select-all py-2.5 px-3 text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg mt-1 font-bold">
+                        <p>🔹 <strong className="text-zinc-900">SUPABASE_URL</strong> = (Tìm thấy ở ô Project Settings &gt; API trên Supabase)</p>
+                        <p>🔹 <strong className="text-zinc-900">SUPABASE_ANON_KEY</strong> = (Khóa bảo mật Anon Key tìm thấy ở API trên Supabase)</p>
+                      </div>
+                      
+                      <p className="mt-2 text-indigo-900 text-[11px] font-bold">
+                        👉 Hoàn tất: Bấm <strong>Re-deploy</strong> lại dự án trên Vercel. Toàn bộ đề câu hỏi khi bạn tải lên hay nạp tệp JSON sẽ được tải thẳng lên cơ sở dữ liệu và lưu giữ vĩnh viễn ở Vercel!
+                      </p>
+                    </div>
+                  </div>
+
                   {/* Connection Header Box */}
                   <div className={`p-5 rounded-2xl border ${supabaseStatus.connected ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'} shadow-sm`}>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
