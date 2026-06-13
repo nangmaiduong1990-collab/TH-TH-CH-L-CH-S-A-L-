@@ -171,11 +171,25 @@ export default function App() {
     };
   });
 
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(true);
-  const [adminProfile, setAdminProfile] = useState({
-    name: 'DƯƠNG THỊ HIỆP',
-    role: 'Quản trị viên',
-    email: 'hiep.duong@school.edu.vn'
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
+    try {
+      return localStorage.getItem('quizmaster_admin_loggedin') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+  const [adminProfile, setAdminProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('quizmaster_admin_profile');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {}
+    return {
+      name: 'DƯƠNG THỊ HIỆP',
+      role: 'Quản trị viên',
+      email: 'hiep.duong@school.edu.vn'
+    };
   });
 
   const [authTab, setAuthTab] = useState('login');
@@ -521,9 +535,52 @@ export default function App() {
       showToast('Vui lòng điền đầy đủ địa chỉ email và mật khẩu!', 'warning');
       return;
     }
+    
+    const emailLower = authForm.email.trim().toLowerCase();
+    const isWhitelisted = emailWhitelist.some(email => email.toLowerCase() === emailLower);
+    
+    if (!isWhitelisted) {
+      showToast('Email này không thuộc Whitelist quản trị viên!', 'error');
+      return;
+    }
+
+    let expectedPassword = '123456';
+    let expectedName = adminProfile.name || 'QUẢN TRỊ VIÊN';
+    
+    // Check if there is a matching user stored in localStorage
+    const storedProfileStr = localStorage.getItem('quizmaster_admin_profile');
+    if (storedProfileStr) {
+      try {
+        const stored = JSON.parse(storedProfileStr);
+        if (stored.email.toLowerCase() === emailLower && stored.password) {
+          expectedPassword = stored.password;
+          expectedName = stored.name;
+        }
+      } catch (err) {}
+    } else if (emailLower === 'admin@quizmaster.com') {
+      expectedName = 'QUẢN TRỊ VIÊN HỆ THỐNG';
+    } else if (emailLower === 'hiep.duong@school.edu.vn') {
+      expectedName = 'DƯƠNG THỊ HIỆP';
+    }
+
+    if (authForm.password !== expectedPassword) {
+      showToast('Mật khẩu quản trị không chính xác!', 'error');
+      return;
+    }
+
     setIsAdminLoggedIn(true);
-    setIsAuthModalOpen(false);
-    showToast(`Chào mừng Quản trị viên ${adminProfile.name} đã kết nối hệ thống!`, 'success');
+    try {
+      localStorage.setItem('quizmaster_admin_loggedin', 'true');
+      const finalProfile = {
+        name: expectedName,
+        role: 'Quản trị viên',
+        email: emailLower
+      };
+      setAdminProfile(finalProfile);
+      localStorage.setItem('quizmaster_admin_profile', JSON.stringify(finalProfile));
+    } catch (err) {}
+    
+    showToast(`Chào mừng Quản trị viên ${expectedName} đã kết nối hệ thống!`, 'success');
   };
 
   const handleAdminRegister = (e) => {
@@ -536,14 +593,36 @@ export default function App() {
       showToast('Mật khẩu xác nhận không trùng khớp!', 'error');
       return;
     }
-    setAdminProfile({
+
+    const emailLower = authForm.email.trim().toLowerCase();
+    
+    // Auto-whitelist newly registered admin
+    if (!emailWhitelist.some(email => email.toLowerCase() === emailLower)) {
+      setEmailWhitelist(prev => [...prev, emailLower]);
+    }
+
+    const newProfile = {
       name: authForm.name.toUpperCase(),
       role: 'Quản trị viên',
-      email: authForm.email
-    });
+      email: emailLower,
+      password: authForm.password
+    };
+
+    setAdminProfile(newProfile);
     setIsAdminLoggedIn(true);
-    setIsAuthModalOpen(false);
+    try {
+      localStorage.setItem('quizmaster_admin_loggedin', 'true');
+      localStorage.setItem('quizmaster_admin_profile', JSON.stringify(newProfile));
+    } catch (err) {}
     showToast(`Đã thiết lập tài khoản Quản trị cho ${authForm.name}!`, 'success');
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminLoggedIn(false);
+    try {
+      localStorage.removeItem('quizmaster_admin_loggedin');
+    } catch (e) {}
+    showToast('Đã đăng xuất tài khoản quản trị thành công!', 'info');
   };
 
   const handleDocumentUpload = (e: any) => {
@@ -2168,19 +2247,172 @@ export default function App() {
           {/* VIEW: ADMIN MANAGER */}
           {currentView === 'admin' && (
             <div className="space-y-6 animate-fadeIn">
-              
-              <div className="bg-white rounded-2xl p-4 border border-slate-150 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-left">
-                  <h2 className="text-base font-black text-slate-900 flex items-center gap-1.5 font-display uppercase">⚙️ Bảng Điều Khiển Quản Trị</h2>
-                  <p className="text-[10px] text-slate-400 font-extrabold uppercase mt-0.5">Mạng lưới giám sát khảo thí live</p>
+              {!isAdminLoggedIn ? (
+                /* GIAO DIỆN ĐĂNG NHẬP / ĐĂNG KÝ QUẢN TRỊ VIÊN */
+                <div className="max-w-md mx-auto bg-white rounded-2xl border border-slate-150 shadow-xl overflow-hidden animate-fadeIn">
+                  <div className="p-6 sm:p-8 bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 text-white relative text-center">
+                    <div className="absolute top-3 right-3 bg-white/10 px-2.5 py-0.5 rounded text-[9px] font-black uppercase text-indigo-200">
+                      CỔNG BẢO MẬT
+                    </div>
+                    <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
+                      <Settings className="w-6 h-6 text-indigo-300 animate-spin-slow" />
+                    </div>
+                    <h2 className="text-base font-black uppercase font-display tracking-wide">QUẢN TRỊ HỆ THỐNG</h2>
+                    <p className="text-[9px] text-indigo-200 uppercase tracking-widest mt-1">Đăng nhập tài khoản giám thị / quản lý</p>
+                  </div>
+
+                  <div className="p-6 sm:p-8 space-y-6">
+                    {/* Tabs Đăng nhập / Đăng ký */}
+                    <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200/60">
+                      <button
+                        type="button"
+                        onClick={() => setAuthTab('login')}
+                        className={`py-2 text-xs font-black rounded-lg transition-all uppercase ${authTab === 'login' ? 'bg-white text-indigo-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Đăng Nhập
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAuthTab('register')}
+                        className={`py-2 text-xs font-black rounded-lg transition-all uppercase ${authTab === 'register' ? 'bg-white text-indigo-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                      >
+                        Đăng Ký Mới
+                      </button>
+                    </div>
+
+                    {authTab === 'login' ? (
+                      <form onSubmit={handleAdminLogin} className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-black text-slate-450 uppercase tracking-wider">Email Quản Trị</label>
+                          <input
+                            type="email"
+                            required
+                            value={authForm.email}
+                            onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
+                            placeholder="admin@quizmaster.com"
+                            className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-black text-slate-450 uppercase tracking-wider">Mật Khẩu</label>
+                          <input
+                            type="password"
+                            required
+                            value={authForm.password}
+                            onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+                            placeholder="Mật khẩu"
+                            className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="bg-indigo-50/50 border border-indigo-100 p-3 rounded-xl text-[10px] text-indigo-700 font-medium space-y-1">
+                          <p className="font-extrabold text-[11px] text-indigo-800">💡 Gợi ý tài khoản kiểm thử:</p>
+                          <p>• Email: <strong className="font-mono">admin@quizmaster.com</strong></p>
+                          <p>• Mật khẩu: <strong className="font-mono">123456</strong></p>
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="w-full py-3 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-extrabold text-xs rounded-xl tracking-wider uppercase transition-all shadow-md shadow-indigo-150"
+                        >
+                          Xác Thực Đăng Nhập 🚀
+                        </button>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleAdminRegister} className="space-y-4">
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-black text-slate-450 uppercase tracking-wider">Họ & Tên Quản Trị</label>
+                          <input
+                            type="text"
+                            required
+                            value={authForm.name}
+                            onChange={(e) => setAuthForm(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Ví dụ: DƯƠNG THỊ HIỆP"
+                            className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="block text-[10px] font-black text-slate-450 uppercase tracking-wider">Email Quản Trị</label>
+                          <input
+                            type="email"
+                            required
+                            value={authForm.email}
+                            onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
+                            placeholder="hiep.duong@school.edu.vn"
+                            className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] font-black text-slate-450 uppercase tracking-wider">Mật Khẩu</label>
+                            <input
+                              type="password"
+                              required
+                              value={authForm.password}
+                              onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+                              placeholder="Mật khẩu"
+                              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="block text-[10px] font-black text-slate-450 uppercase tracking-wider">Xác Nhận</label>
+                            <input
+                              type="password"
+                              required
+                              value={authForm.confirmPassword}
+                              onChange={(e) => setAuthForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                              placeholder="Xác nhận"
+                              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-purple-50 border border-purple-100 rounded-xl text-[10px] text-purple-700 leading-normal">
+                          🛡️ Đăng ký tài khoản sẽ tự động cấp quyền whitelist truy cập ban giám thị cho địa chỉ email này.
+                        </div>
+
+                        <button
+                          type="submit"
+                          className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-extrabold text-xs rounded-xl tracking-wider uppercase transition-all shadow-md shadow-purple-150"
+                        >
+                          Thiết Lập Mới & Đăng Nhập ✍️
+                        </button>
+                      </form>
+                    )}
+                  </div>
                 </div>
-                <button 
-                  onClick={() => setCurrentView('portal')}
-                  className="bg-slate-100 text-slate-600 hover:bg-slate-200 font-black text-[10px] px-3.5 py-2 rounded-lg transition-colors"
-                >
-                  Về trang chủ Portal
-                </button>
-              </div>
+              ) : (
+                /* BẢNG ĐIỀU KHIỂN CHÍNH THỨC CỦA ADMIN (ĐÃ LOGGED IN) */
+                <>
+                  <div className="bg-white rounded-2xl p-4 border border-slate-150 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-left flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-display font-black text-base shadow-inner">
+                        🛡️
+                      </div>
+                      <div>
+                        <h2 className="text-base font-black text-slate-900 flex items-center gap-1.5 font-display uppercase">⚙️ Bảng Điều Khiển Quản Trị</h2>
+                        <p className="text-[10px] text-slate-400 font-extrabold uppercase mt-0.5">Xác thực: {adminProfile.name} • {adminProfile.role}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={handleAdminLogout}
+                        className="bg-rose-50 text-rose-600 hover:bg-rose-100 font-extrabold text-[10px] px-3.5 py-2 rounded-lg transition-colors border border-rose-200 uppercase tracking-widest flex items-center gap-1"
+                      >
+                        🚪 Đăng xuất
+                      </button>
+                      <button 
+                        onClick={() => setCurrentView('portal')}
+                        className="bg-slate-100 text-slate-600 hover:bg-slate-200 font-black text-[10px] px-3.5 py-2 rounded-lg transition-colors"
+                      >
+                        Về trang chủ Portal
+                      </button>
+                    </div>
+                  </div>
 
               <div className="bg-white p-1 rounded-xl border border-slate-150 flex flex-wrap gap-1">
                 {[
@@ -2488,7 +2720,8 @@ export default function App() {
                   </div>
                 </div>
               )}
-
+                </>
+              )}
             </div>
           )}
 
