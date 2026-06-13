@@ -313,7 +313,7 @@ export default function App() {
     grade8Time: 50,
     grade9Time: 50,
     maintenanceMode: false,
-    blockF12: true,
+    blockF12: false,
     removeDuplicateNames: false
   });
 
@@ -1654,12 +1654,20 @@ export default function App() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[11px] font-bold">
                 <span className="text-slate-500">Khóa phím chuột F12</span>
-                <span className={`px-2 py-0.5 rounded text-[9px] font-black ${systemConfig.blockF12 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                  {systemConfig.blockF12 ? 'BẬT' : 'TẮT'}
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newVal = !systemConfig.blockF12;
+                    setSystemConfig(prev => ({ ...prev, blockF12: newVal }));
+                    showToast(`Đã ${newVal ? 'BẬT' : 'TẮT'} khóa phím chuột F12 chống gian lận!`, 'info');
+                  }}
+                  className={`px-2 py-0.5 rounded text-[9px] font-black cursor-pointer hover:opacity-80 transition-all ${systemConfig.blockF12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}
+                >
+                  {systemConfig.blockF12 ? 'BẬT 🔓' : 'TẮT 🔒'}
+                </button>
               </div>
               <p className="text-[10px] text-slate-450 leading-relaxed">
-                Ngăn chặn hành vi bóc tách mã đề, chụp đề thi phi pháp bằng bảng điều khiển DevTools hỗ trợ thi cử trung thực.
+                Ngăn chặn hành vi sao chép bóc tách mã đề, chụp màn hình phi pháp bằng bảng điều khiển DevTools. Nhấp nút trên để điều chỉnh tự do.
               </p>
             </div>
           </div>
