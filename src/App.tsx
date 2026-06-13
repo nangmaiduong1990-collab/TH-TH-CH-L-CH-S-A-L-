@@ -171,6 +171,16 @@ export default function App() {
     };
   });
 
+  const [downloadedResources, setDownloadedResources] = useState(() => {
+    const local = localStorage.getItem('quizmaster_downloaded_resources');
+    return local ? JSON.parse(local) : MOST_DOWNLOADED_RESOURCES;
+  });
+
+  const [newestResources, setNewestResources] = useState(() => {
+    const local = localStorage.getItem('quizmaster_newest_resources');
+    return local ? JSON.parse(local) : NEWEST_RESOURCES;
+  });
+
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
     try {
       return localStorage.getItem('quizmaster_admin_loggedin') === 'true';
@@ -629,18 +639,66 @@ export default function App() {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result;
-      if (typeof result === 'string') {
-        setAiPrompt(result);
-        showToast(`📂 Nạp thành công nội dung văn bản từ "${file.name}"!`, 'success');
-      }
-    };
-    reader.onerror = () => {
-      showToast('❌ Không thể đọc tập tin này. Thử lại.', 'error');
-    };
-    reader.readAsText(file);
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      showToast('📄 Đang tải và phân tích file PDF bằng trợ lý trí lực Gemini AI...', 'info');
+      
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const result = event.target?.result as string;
+        if (!result) {
+          showToast('❌ Không thể nạp dữ liệu tập tin PDF.', 'error');
+          return;
+        }
+        
+        // Extract base64 part
+        const base64Index = result.indexOf('base64,');
+        if (base64Index === -1) {
+          showToast('❌ Định dạng file PDF không thể giải mã.', 'error');
+          return;
+        }
+        
+        const base64Data = result.substring(base64Index + 7);
+        
+        try {
+          const parseRes = await fetch('/api/parse-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pdfBase64: base64Data, filename: file.name })
+          });
+          
+          if (!parseRes.ok) throw new Error('Yêu cầu phân tích thất bại');
+          const parseData = await parseRes.json();
+          if (parseData.success && parseData.text) {
+            setAiPrompt(parseData.text);
+            showToast(`📂 Nạp & Trích xuất toàn bộ văn bản từ "${file.name}" thành công! 🎉`, 'success');
+          } else {
+            showToast(`❌ Lỗi trích xuất: ${parseData.error || 'Lỗi không xác định'}`, 'error');
+          }
+        } catch (err: any) {
+          console.error(err);
+          showToast('❌ Không kết nối được đến máy chủ AI để xử lý file PDF.', 'error');
+        }
+      };
+      
+      reader.onerror = () => {
+        showToast('❌ Không thể đọc tập tin PDF này.', 'error');
+      };
+      
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result;
+        if (typeof result === 'string') {
+          setAiPrompt(result);
+          showToast(`📂 Nạp thành công nội dung văn bản từ "${file.name}"!`, 'success');
+        }
+      };
+      reader.onerror = () => {
+        showToast('❌ Không thể đọc tập tin này. Thử lại.', 'error');
+      };
+      reader.readAsText(file);
+    }
     e.target.value = '';
   };
 
@@ -992,6 +1050,36 @@ export default function App() {
           console.error(e);
           showToast("Đã xóa học sinh trên trình duyệt! Việc đồng bộ máy chủ bị gián đoạn.", "info");
         }
+      }
+    });
+  };
+
+  const handleDeleteDownloadedResource = (id: string, title: string) => {
+    setDialogConfig({
+      title: "Xác nhận xóa tài liệu",
+      message: `Bạn có chắc chắn muốn xóa tài liệu học tập "${title}" khỏi danh sách tải nhiều nhất không? Hoạt động này không thể phục hồi.`,
+      onCancel: () => setDialogConfig(null),
+      onConfirm: () => {
+        setDialogConfig(null);
+        const updated = downloadedResources.filter(item => item.id !== id);
+        setDownloadedResources(updated);
+        localStorage.setItem('quizmaster_downloaded_resources', JSON.stringify(updated));
+        showToast("Đã xóa tài liệu khỏi danh sách thành công! 🗑️", "success");
+      }
+    });
+  };
+
+  const handleDeleteNewestResource = (id: string, title: string) => {
+    setDialogConfig({
+      title: "Xác nhận xóa đề kiểm tra",
+      message: `Bạn có chắc chắn muốn xóa đề kiểm tra "${title}" khỏi danh sách đề mới nhất không? Hoạt động này không thể phục hồi.`,
+      onCancel: () => setDialogConfig(null),
+      onConfirm: () => {
+        setDialogConfig(null);
+        const updated = newestResources.filter(item => item.id !== id);
+        setNewestResources(updated);
+        localStorage.setItem('quizmaster_newest_resources', JSON.stringify(updated));
+        showToast("Đã xóa đề kiểm tra khỏi danh sách thành công! 🗑️", "success");
       }
     });
   };
@@ -2014,17 +2102,18 @@ export default function App() {
                 <div className="flex gap-2 w-full sm:w-auto">
                   <input 
                     type="file" 
+                    id="import-questions-file-input"
                     ref={importQuestionsUploaderRef} 
                     accept=".json" 
                     onChange={handleImportQuestions} 
                     className="hidden" 
                   />
-                  <button 
-                    onClick={() => importQuestionsUploaderRef.current?.click()}
-                    className="flex-1 sm:flex-none text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[11px] px-3.5 py-2 rounded-lg transition-colors uppercase tracking-wider flex items-center gap-1.5"
+                  <label 
+                    htmlFor="import-questions-file-input"
+                    className="cursor-pointer flex-1 sm:flex-none text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[11px] px-3.5 py-2 rounded-lg transition-colors uppercase tracking-wider flex items-center justify-center gap-1.5"
                   >
                     <Upload className="w-3.5 h-3.5" /> Nạp đề JSON
-                  </button>
+                  </label>
                   <button 
                     onClick={handleExportQuestions}
                     className="flex-1 sm:flex-none text-center bg-indigo-55/60 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[11px] px-3.5 py-2 rounded-lg transition-colors uppercase tracking-wider flex items-center gap-1.5"
@@ -2044,27 +2133,43 @@ export default function App() {
 
                 <input 
                   type="file"
+                  id="ai-doc-uploader-file-input"
                   ref={aiDocUploaderRef}
-                  accept=".txt,.json,.md,.csv"
+                  accept=".txt,.json,.md,.csv,.pdf"
                   onChange={handleDocumentUpload}
                   className="hidden"
                 />
 
                 <textarea 
                   rows="3"
-                  placeholder="Dán bài học địa lí lịch sử thô tại đây để AI tự động chuyển hóa thành câu hỏi trắc nghiệm chất lượng..."
+                  placeholder="Dán bài học địa lí lịch sử thô tại đây hoặc nạp file txt/md/pdf tải lên để AI tự động chuyển hóa thành câu hỏi trắc nghiệm chất lượng..."
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-semibold relative z-10"
                 ></textarea>
 
                 <div className="flex flex-wrap gap-2 justify-between items-center relative z-10">
-                  <button 
-                    onClick={() => aiDocUploaderRef.current?.click()}
-                    className="bg-white/10 hover:bg-white/15 border border-white/10 text-white text-[11px] font-black px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
-                  >
-                    📂 Nạp file txt/md
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <label 
+                      htmlFor="ai-doc-uploader-file-input"
+                      className="cursor-pointer bg-white/10 hover:bg-white/15 border border-white/10 text-white text-[11px] font-black px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 animate-pulse"
+                    >
+                      📂 Nạp tài liệu (txt/md/pdf)
+                    </label>
+                    {aiPrompt && (
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setAiPrompt('');
+                          showToast('Đã xóa nội dung tài liệu thành công! 🗑️', 'info');
+                        }}
+                        className="bg-rose-950/50 hover:bg-rose-900/60 border border-rose-800/50 text-rose-200 text-[11px] font-black px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                        title="Xóa tài liệu hiện tại"
+                      >
+                        <Trash className="w-3.5 h-3.5" /> Xóa tài liệu
+                      </button>
+                    )}
+                  </div>
                   
                   <button 
                     onClick={handleGenerateQuestionWithAI}

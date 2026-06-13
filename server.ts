@@ -9,7 +9,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
 // Initialize Gemini Client
 const apiKey = process.env.GEMINI_API_KEY || "";
@@ -615,6 +616,40 @@ Hãy tự quyết định câu hỏi thuộc môn Lịch sử hay Địa lí tù
   } catch (err: any) {
     console.error("Gemini Error:", err);
     res.status(500).json({ error: err.message || "Không thể kết nối máy chủ AI" });
+  }
+});
+
+app.post("/api/parse-pdf", async (req, res) => {
+  try {
+    const { pdfBase64, filename } = req.body;
+    if (!pdfBase64) {
+      return res.status(400).json({ error: "Nội dung tệp PDF trống!" });
+    }
+
+    if (!apiKey) {
+      return res.status(500).json({ 
+        error: "GEMINI_API_KEY chưa được cấu hình trong bảng Secrets!" 
+      });
+    }
+
+    const pdfPart = {
+      inlineData: {
+        data: pdfBase64,
+        mimeType: "application/pdf"
+      }
+    };
+
+    const userPrompt = "Hãy phân tích tệp tài liệu PDF này và trích xuất lại toàn bộ văn bản/nội dung kiến thức thô dạng chữ (plain text) bên trong một cách đầy đủ, chính xác từng từ bằng Tiếng Việt. Giữ nguyên cấu trúc thông tin quan trọng. Nghiêm cấm tóm tắt, nghiêm cấm viết quá ngắn gọn, hãy trích xuất toàn bộ dữ liệu chi tiết nhất có thể để phục vụ việc soạn đề thi trắc nghiệm học thuật.";
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: [pdfPart, userPrompt]
+    });
+
+    res.json({ success: true, text: response.text });
+  } catch (err: any) {
+    console.error("Gemini PDF Parse Error:", err);
+    res.status(500).json({ error: err.message || "Lỗi khi trích xuất tài liệu từ Gemini" });
   }
 });
 
