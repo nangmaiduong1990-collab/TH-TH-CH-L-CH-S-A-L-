@@ -206,9 +206,9 @@ export default function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authForm, setAuthForm] = useState({ 
     name: 'CÔ DƯƠNG THỊ HIỆP', 
-    email: 'hiepdt.c2binhan@gmail.com', 
-    password: 'nguyentuanhung2010', 
-    confirmPassword: 'nguyentuanhung2010' 
+    email: '', 
+    password: '', 
+    confirmPassword: '' 
   });
 
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -2493,7 +2493,7 @@ export default function App() {
                           required
                           value={authForm.email}
                           onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
-                          placeholder="hiepdt.c2binhan@gmail.com"
+                          placeholder="Nhập email quản trị của bạn..."
                           className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
                         />
                       </div>
@@ -2505,15 +2505,9 @@ export default function App() {
                           required
                           value={authForm.password}
                           onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
-                          placeholder="Mật khẩu"
+                          placeholder="Nhập mật khẩu..."
                           className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 focus:outline-none"
                         />
-                      </div>
-
-                      <div className="bg-indigo-50/60 border border-indigo-150 p-3.5 rounded-xl text-[10.5px] text-indigo-800 font-semibold space-y-1.5 shadow-sm">
-                        <p className="font-extrabold text-[11px] text-indigo-900 flex items-center gap-1">💡 Tài khoản quản trị & giám thị:</p>
-                        <p>• Admin chính: <strong className="font-mono text-indigo-900 bg-white px-1.5 py-0.5 rounded border border-indigo-100">hiepdt.c2binhan@gmail.com</strong> / <strong className="font-mono text-indigo-900 bg-indigo-100 px-1 py-0.5 rounded">nguyentuanhung2010</strong></p>
-                        <p>• Khôi phục tài khoản: <strong className="font-mono text-indigo-900 bg-white px-1.5 py-0.5 rounded border border-indigo-100">duonghiep559@gmail.com</strong> / <strong className="font-mono text-indigo-900 bg-indigo-100 px-1 py-0.5 rounded">nguyentuanhung</strong></p>
                       </div>
 
                       <button
