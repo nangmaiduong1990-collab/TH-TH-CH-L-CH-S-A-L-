@@ -715,17 +715,18 @@ export default function App() {
             body: JSON.stringify({ pdfBase64: base64Data, filename: file.name })
           });
           
-          if (!parseRes.ok) throw new Error('Yêu cầu phân tích thất bại');
-          const parseData = await parseRes.json();
-          if (parseData.success && parseData.text) {
+          const parseData = await parseRes.json().catch(() => ({}));
+          
+          if (parseRes.ok && parseData.success && parseData.text) {
             setAiPrompt(parseData.text);
             showToast(`📂 Nạp & Trích xuất toàn bộ văn bản từ "${file.name}" thành công! 🎉`, 'success');
           } else {
-            showToast(`❌ Lỗi trích xuất: ${parseData.error || 'Lỗi không xác định'}`, 'error');
+            const errorMsg = parseData.error || `Lỗi máy chủ (${parseRes.status})`;
+            showToast(`❌ Lỗi trích xuất: ${errorMsg}`, 'error');
           }
         } catch (err: any) {
           console.error(err);
-          showToast('❌ Không kết nối được đến máy chủ AI để xử lý file PDF.', 'error');
+          showToast(`❌ Lỗi kết nối: ${err.message || 'Không thể liên lạc với máy chủ AI để xử lý file PDF.'}`, 'error');
         }
       };
       
@@ -768,11 +769,23 @@ export default function App() {
         body: JSON.stringify({ prompt: aiPrompt, grade: newQuestion.grade })
       });
 
-      if (!response.ok) throw new Error(`Status ${response.status}`);
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       
-      if (data.success && data.text) {
-        const parsed = JSON.parse(data.text);
+      if (response.ok && data.success && data.text) {
+        let cleanText = data.text.trim();
+        if (cleanText.startsWith("```")) {
+          const firstNewline = cleanText.indexOf("\n");
+          if (firstNewline !== -1) {
+            cleanText = cleanText.substring(firstNewline + 1);
+          } else {
+            cleanText = cleanText.substring(3);
+          }
+          if (cleanText.endsWith("```")) {
+            cleanText = cleanText.substring(0, cleanText.length - 3);
+          }
+          cleanText = cleanText.trim();
+        }
+        const parsed = JSON.parse(cleanText);
         
         setNewQuestion({
           content: parsed.content || 'Nội dung câu hỏi',
@@ -793,10 +806,11 @@ export default function App() {
         });
         showToast('🤖 AI đã tự động phân tích và nhập câu hỏi thành công!', 'success');
       } else {
-        throw new Error(data.error || 'Dữ liệu không đúng định dạng');
+        const errMsg = data.error || `Lỗi máy chủ (${response.status})`;
+        showToast(`❌ Lỗi nạp dữ liệu AI: ${errMsg}`, 'error');
       }
-    } catch (err) {
-      showToast('❌ Lỗi nạp dữ liệu AI. Hệ thống tự động kích hoạt chế độ tự nhập.', 'warning');
+    } catch (err: any) {
+      showToast(`❌ Lỗi kết nối dịch vụ AI: ${err.message || 'Không thể kết nối máy chủ AI'}`, 'warning');
     } finally {
       setIsAiGenerating(false);
     }

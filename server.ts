@@ -621,7 +621,20 @@ Hãy tự quyết định câu hỏi thuộc môn Lịch sử hay Địa lí tù
       },
     });
 
-    const text = response.text;
+    let text = response.text || "";
+    text = text.trim();
+    if (text.startsWith("```")) {
+      const firstNewline = text.indexOf("\n");
+      if (firstNewline !== -1) {
+        text = text.substring(firstNewline + 1);
+      } else {
+        text = text.substring(3);
+      }
+      if (text.endsWith("```")) {
+        text = text.substring(0, text.length - 3);
+      }
+      text = text.trim();
+    }
     res.json({ success: true, text });
   } catch (err: any) {
     console.error("Gemini Error:", err);
@@ -653,7 +666,12 @@ app.post("/api/parse-pdf", async (req, res) => {
 
     const response = await ai.models.generateContent({
       model: "gemini-3.5-flash",
-      contents: [pdfPart, userPrompt]
+      contents: {
+        parts: [
+          pdfPart,
+          { text: userPrompt }
+        ]
+      }
     });
 
     res.json({ success: true, text: response.text });
