@@ -700,6 +700,37 @@ app.post("/api/synth-tts", async (req, res) => {
   }
 });
 
+// SETTINGS ENDPOINTS
+app.get("/api/settings", (req, res) => {
+  const local = loadLocalDb();
+  if (!local.settings) {
+    local.settings = {
+      maintenanceMode: false,
+      maintenanceTime: "BT",
+      blockF12: false
+    };
+    saveLocalDb(local);
+  }
+  res.json(local.settings);
+});
+
+app.post("/api/settings", (req, res) => {
+  const local = loadLocalDb();
+  if (!local.settings) {
+    local.settings = {
+      maintenanceMode: false,
+      maintenanceTime: "BT",
+      blockF12: false
+    };
+  }
+  local.settings = {
+    ...local.settings,
+    ...req.body
+  };
+  saveLocalDb(local);
+  res.json({ success: true, settings: local.settings });
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "QuizMaster API is running" });
 });

@@ -313,9 +313,41 @@ export default function App() {
     grade8Time: 50,
     grade9Time: 50,
     maintenanceMode: false,
+    maintenanceTime: 'BT',
     blockF12: false,
     removeDuplicateNames: false
   });
+
+  const [showLoginOnMaintenance, setShowLoginOnMaintenance] = useState(false);
+
+  const loadSystemSettings = async () => {
+    try {
+      const res = await fetch('/api/settings');
+      if (res.ok) {
+        const data = await res.json();
+        setSystemConfig(prev => ({
+          ...prev,
+          maintenanceMode: data.maintenanceMode ?? false,
+          maintenanceTime: data.maintenanceTime ?? 'BT',
+          blockF12: data.blockF12 ?? false
+        }));
+      }
+    } catch (err) {
+      console.error("Lỗi đồng bộ cấu hình:", err);
+    }
+  };
+
+  const syncSystemSettings = async (updatedFields: any) => {
+    setSystemConfig(prev => {
+      const next = { ...prev, ...updatedFields };
+      fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next)
+      }).catch(err => console.error("Lỗi lưu cấu hình lên server:", err));
+      return next;
+    });
+  };
 
   const [aiPrompt, setAiPrompt] = useState('');
   const [isAiGenerating, setIsAiGenerating] = useState(false);
@@ -407,6 +439,7 @@ export default function App() {
   useEffect(() => {
     loadDatabaseData();
     checkSupabaseStatus();
+    loadSystemSettings();
   }, []);
 
   // Persistence helpers
@@ -979,6 +1012,72 @@ export default function App() {
     showToast(`🔑 Bạn đã bước vào phòng đấu ${matched.title}!`, 'success');
   };
 
+  const handleCopyRoomInvite = (room: any) => {
+    const inviteMessage = `[THƯ MỜI THI ĐẤU KHẢO THÍ ONLINE - QUIZMASTER]
+
+🔔 Xin chào các em học sinh,
+Đây là thông tin phòng thi trực tuyến của lớp:
+
+📌 Tên phòng: ${room.title}
+🏫 Đối tượng: Khối lớp ${room.grade}
+⏱️ Thời lượng: ${room.duration} phút
+📚 Số lượng câu hỏi: ${room.questions} câu
+🔑 MÃ PHÒNG THI ĐẤU: ${room.code}
+
+👉 Hướng dẫn tham gia:
+1. Truy cập vào hệ thống ôn luyện khảo thí QuizMaster.
+2. Chọn "Đấu Trường Live" hoặc chuyển tới phần "Vào Phòng Bằng Mã Số".
+3. Nhập mã phòng đấu: ${room.code} để đồng bộ làm bài thi trực tiếp.
+
+Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
+
+    navigator.clipboard.writeText(inviteMessage)
+      .then(() => showToast(`📋 Đã sao chép thư mời phòng ${room.code} thành công!`, 'success'))
+      .catch(() => showToast('❌ Có lỗi xảy ra khi sao chép.', 'error'));
+  };
+
+  const handleDownloadRoomInvite = (room: any) => {
+    const inviteText = `=======================================================
+               THẺ PHÒNG THI ĐẤU TRỰC TUYẾN
+                     HỆ THỐNG QUIZMASTER
+=======================================================
+
+     THÔNG TIN PHÒNG THI ĐẤU ĐÃ KÍCH HOẠT:
+     ----------------------------------
+     📌 TÊN PHÒNG THI:  ${room.title.toUpperCase()}
+     🏫 ĐỐI TƯỢNG:      Khối Lớp ${room.grade}
+     ⏱️ THỜI LƯỢNG MỞ:  ${room.duration} phút
+     📚 SỐ CÂU HỎI:     ${room.questions} câu hỏi
+     🔑 MÃ KẾT NỐI:     [ ${room.code} ]
+
+   -------------------------------------------------
+   👉 HƯỚNG DẪN DÀNH CHO HỌC SINH THAM GIA THI ĐẤU:
+   -------------------------------------------------
+   Bước 1: Truy cập hệ thống ôn thi QuizMaster Việt Nam.
+   Bước 2: Click vào mục "Đấu Trường Live" trên thanh công cụ chính.
+   Bước 3: Tại phần [Vào phòng bằng mã số], điền chính xác mã: 
+           MÃ PHÒNG: ${room.code}
+   Bước 4: Nhập họ tên thật, lớp học và bấm nút "Tham gia thi".
+
+   - Lưu ý: Không tự ý tải lại trang F5 để tránh mất kết nối.
+   - Chúc tất cả các em làm bài xuất sắc và lội ngược dòng thành công!
+
+=======================================================
+     KỲ ÔN TẬP KHẢO THÍ SỬ - ĐỊA LÍ THCS • THCS BÌNH AN
+=======================================================`;
+
+    const blob = new Blob([inviteText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `THE_PHONG_THI_${room.code}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`📥 Đã tải xuống file thẻ phòng thi ${room.code}!`, 'success');
+  };
+
   // Submit and rank processing
   const submitExam = (examObj) => {
     let checkedCount = 0;
@@ -993,6 +1092,12 @@ export default function App() {
         const isMatched = correctAnswers.length === uAnsList.length && 
           correctAnswers.every((val) => uAnsList.includes(val));
         if (isMatched) checkedCount++;
+      } else if (q.type === 'SHORT_ANSWER') {
+        const userText = typeof uAns === 'string' ? uAns.trim().toLowerCase() : '';
+        const correctText = typeof q.correctAnswer === 'string' ? q.correctAnswer.trim().toLowerCase() : '';
+        if (userText === correctText && correctText !== '') {
+          checkedCount++;
+        }
       } else {
         if (uAns === q.correctAnswer) {
           checkedCount++;
@@ -1171,7 +1276,7 @@ export default function App() {
       showToast('Học phần nội dung câu hỏi trống!', 'warning');
       return;
     }
-    if (newQuestion.options.some(o => !o.text.trim())) {
+    if ((newQuestion.type === 'SINGLE' || newQuestion.type === 'MULTIPLE') && newQuestion.options.some(o => !o.text.trim())) {
       showToast('Cần điền đầy đủ thông tin chữ của phương án!', 'warning');
       return;
     }
@@ -1395,8 +1500,104 @@ export default function App() {
         </div>
       )}
 
-      {/* Hero Header component */}
-      <section className="bg-gradient-to-r from-orange-600 via-indigo-950 to-slate-900 text-white py-12 px-6 shadow-inner relative overflow-hidden">
+      {systemConfig.maintenanceMode && !isAdminLoggedIn ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-gradient-to-tr from-slate-50 relative overflow-hidden to-white py-16">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-100/10 via-transparent to-transparent pointer-events-none"></div>
+          
+          <div className="w-full max-w-2xl px-4 py-8 flex flex-col items-center space-y-8 animate-fadeIn relative z-10">
+            
+            {/* Warning alert symbol with circle */}
+            <div className="relative">
+              <div className="w-20 h-20 bg-rose-50 rounded-[28px] flex items-center justify-center border border-rose-105 shadow-lg animate-pulse">
+                <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center border-2 border-rose-500 shadow-md">
+                  <AlertCircle className="w-8 h-8 text-rose-500" />
+                </div>
+              </div>
+            </div>
+
+            {/* Display names */}
+            <div className="space-y-3 text-center">
+              <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight font-display uppercase">
+                Hệ Thống <span className="text-rose-600 font-black">Bảo Trì</span>
+              </h2>
+              <p className="text-slate-500 text-xs sm:text-sm font-semibold max-w-md mx-auto leading-relaxed">
+                Chúng tôi đang thực hiện một số nâng cấp quan trọng để cải thiện hiệu suất. Vui lòng quay lại sau!
+              </p>
+            </div>
+
+            {/* Estimated execution time badge */}
+            <div className="flex items-center gap-1.5 px-4.5 py-2 bg-slate-50 border border-slate-150 rounded-full text-[10px] font-black uppercase tracking-wider text-slate-500 shadow-inner flex-row">
+              <Clock className="w-3.5 h-3.5 text-slate-400" />
+              <span>THỜI GIAN DỰ KIẾN: {systemConfig.maintenanceTime || 'BT'}</span>
+            </div>
+
+            {/* Subtle dividing line */}
+            <div className="w-64 border-t border-slate-200/85 my-4"></div>
+
+            {/* Admin entry portal section */}
+            {!showLoginOnMaintenance ? (
+              <button
+                type="button"
+                onClick={() => setShowLoginOnMaintenance(true)}
+                className="text-[10px] font-black tracking-widest text-slate-400 hover:text-indigo-600 uppercase transition-colors"
+              >
+                QUẢN TRỊ VIÊN ĐĂNG NHẬP
+              </button>
+            ) : (
+              <div className="w-full max-w-sm bg-white p-6 rounded-2xl border border-slate-150 shadow-xl space-y-4 animate-scaleIn">
+                <div className="text-center">
+                  <span className="block text-[9px] font-black tracking-widest text-indigo-600 uppercase">CỔNG XÁC THỰC</span>
+                  <h3 className="text-sm font-black text-slate-800 uppercase mt-0.5 animate-pulse">XÁC MINH BAN QUẢN TRỊ</h3>
+                </div>
+                
+                <form onSubmit={handleAdminLogin} className="space-y-3 text-left">
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-black text-slate-500 uppercase tracking-wider">Email Quản trị viên</label>
+                    <input
+                      type="email"
+                      required
+                      value={authForm.email}
+                      onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Nhập email..."
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 bg-slate-50"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-black text-slate-500 uppercase tracking-wider">Mật khẩu</label>
+                    <input
+                      type="password"
+                      required
+                      value={authForm.password}
+                      onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Nhập mật khẩu..."
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500 bg-slate-50"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[10px] py-2.5 rounded-xl transition-all uppercase tracking-wider shadow-md shadow-indigo-100"
+                  >
+                    Xác nhận kết nối
+                  </button>
+                </form>
+
+                <button
+                  type="button"
+                  onClick={() => setShowLoginOnMaintenance(false)}
+                  className="text-[9px] font-black tracking-wider text-slate-400 hover:text-slate-600 uppercase underline"
+                >
+                  Quay lại thông báo bảo trì
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Hero Header component */}
+          <section className="bg-gradient-to-r from-orange-600 via-indigo-950 to-slate-900 text-white py-12 px-6 shadow-inner relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-orange-400/10 via-transparent to-transparent"></div>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
           <div className="text-left space-y-4 max-w-2xl">
@@ -1658,7 +1859,7 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     const newVal = !systemConfig.blockF12;
-                    setSystemConfig(prev => ({ ...prev, blockF12: newVal }));
+                    syncSystemSettings({ blockF12: newVal });
                     showToast(`Đã ${newVal ? 'BẬT' : 'TẮT'} khóa phím chuột F12 chống gian lận!`, 'info');
                   }}
                   className={`px-2 py-0.5 rounded text-[9px] font-black cursor-pointer hover:opacity-80 transition-all ${systemConfig.blockF12 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}
@@ -1976,12 +2177,32 @@ export default function App() {
                           <div className="bg-indigo-50 py-1 rounded">{room.duration}p</div>
                           <div className="bg-indigo-50 py-1 rounded">{room.questions} câu</div>
                         </div>
-                        <button 
-                          onClick={(e) => handleJoinPrivateRoom(e, room.code)}
-                          className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg transition-colors uppercase tracking-wider"
-                        >
-                          Tham gia thi
-                        </button>
+                        <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 mt-1">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleCopyRoomInvite(room)}
+                              className="flex-1 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 hover:text-indigo-800 text-[10px] font-black rounded-lg transition-colors uppercase tracking-wider border border-indigo-200 flex items-center justify-center gap-1 cursor-pointer select-none"
+                              title="Sao chép toàn bộ nội dung thư mời phòng thi"
+                            >
+                              📋 Sao chép
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadRoomInvite(room)}
+                              className="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 text-[10px] font-black rounded-lg transition-colors uppercase tracking-wider border border-emerald-200 flex items-center justify-center gap-1 cursor-pointer select-none"
+                              title="Tải thẻ hướng dẫn nộp hồ sơ thi học sinh (.txt)"
+                            >
+                              📥 Tải mã
+                            </button>
+                          </div>
+                          <button 
+                            onClick={(e) => handleJoinPrivateRoom(e, room.code)}
+                            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-lg transition-colors uppercase tracking-wider shadow-sm select-none cursor-pointer"
+                          >
+                            Tham gia thi
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2313,12 +2534,17 @@ export default function App() {
                       {[
                         { key: 'SINGLE', name: 'Một đáp án' },
                         { key: 'MULTIPLE', name: 'Nhiều đáp án đúng' },
-                        { key: 'TRUE FALSE', name: 'Đáng hay sai' }
+                        { key: 'TRUE FALSE', name: 'Đúng hay sai' },
+                        { key: 'SHORT_ANSWER', name: 'Trả lời ngắn' }
                       ].map(type => (
                         <button
                           type="button"
                           key={type.key}
-                          onClick={() => setNewQuestion(prev => ({ ...prev, type: type.key, correctAnswer: type.key === 'TRUE FALSE' ? 0 : prev.correctAnswer }))}
+                          onClick={() => setNewQuestion(prev => ({ 
+                            ...prev, 
+                            type: type.key, 
+                            correctAnswer: type.key === 'TRUE FALSE' ? 0 : (type.key === 'SHORT_ANSWER' ? '' : 0) 
+                          }))}
                           className={`py-2 rounded-lg text-xs font-black border transition-colors ${newQuestion.type === type.key ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}
                         >
                           {type.name}
@@ -2339,12 +2565,12 @@ export default function App() {
                   ></textarea>
                 </div>
 
-                {newQuestion.type !== 'TRUE FALSE' ? (
+                {newQuestion.type === 'SINGLE' || newQuestion.type === 'MULTIPLE' ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-black text-slate-500 uppercase tracking-wider">CÁC PHƯƠNG ÁN ĐỒNG BỘ ({newQuestion.options.length})</span>
                       <button 
-                        type="button"
+                        type="button" 
                         onClick={() => setIsQuickImportOpen(!isQuickImportOpen)}
                         className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded border border-amber-200 font-extrabold uppercase tracking-wider"
                       >
@@ -2388,7 +2614,7 @@ export default function App() {
                                   setNewQuestion(prev => ({ ...prev, correctAnswer: [...currentCorrects, idx] }));
                                 }
                               } else {
-                                setNewQuestion(prev => ({ ...prev, correctAnswer: idx }));
+                                  setNewQuestion(prev => ({ ...prev, correctAnswer: idx }));
                               }
                             }}
                             className="text-indigo-600 rounded cursor-pointer"
@@ -2423,7 +2649,7 @@ export default function App() {
                       + Phác thảo thêm đáp án
                     </button>
                   </div>
-                ) : (
+                ) : newQuestion.type === 'TRUE FALSE' ? (
                   <div className="space-y-2 bg-slate-50 p-4 rounded-xl">
                     <span className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-2">Đáp án đúng cho dạng Đúng/Sai</span>
                     <div className="flex gap-2">
@@ -2442,6 +2668,17 @@ export default function App() {
                         SAI (Không đồng ý)
                       </button>
                     </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2 bg-slate-50 p-4 rounded-xl">
+                    <span className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-2">Đáp án đúng cho dạng Trả lời ngắn</span>
+                    <input 
+                      type="text" 
+                      placeholder="Nhập cụm từ/đáp án ngắn chính xác..."
+                      value={typeof newQuestion.correctAnswer === 'string' ? newQuestion.correctAnswer : ''}
+                      onChange={(e) => setNewQuestion(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold focus:outline-none focus:border-indigo-500 bg-white"
+                    />
                   </div>
                 )}
 
@@ -2608,6 +2845,64 @@ export default function App() {
                           </button>
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Cổng điều chỉnh Bảo trì Hệ thống */}
+                  <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4 animate-fadeIn">
+                    <div className="flex items-center gap-2 pb-2 border-b border-slate-100 font-display">
+                      <Lock className="w-4 h-4 text-rose-500 animate-pulse" />
+                      <span className="block text-xs font-black text-rose-600 uppercase tracking-wider">CẤU HÌNH BẢO TRÌ HỆ THỐNG</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-3 p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col justify-between">
+                        <div>
+                          <span className="block text-xs font-black text-slate-800">Chế độ Bảo trì (Khóa hệ thống)</span>
+                          <span className="block text-[10px] text-slate-400 mt-1 leading-relaxed">Khi kích hoạt, mọi thí sinh khi truy cập hệ thống sẽ nhìn thấy màn hình báo lỗi bảo trì để đảm bảo an toàn nâng cấp.</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextMode = !systemConfig.maintenanceMode;
+                            syncSystemSettings({ maintenanceMode: nextMode });
+                            showToast(`Đã ${nextMode ? 'KÍCH HOẠT' : 'GỠ BỎ'} trạng thái bảo trì hệ thống!`, nextMode ? 'warning' : 'success');
+                          }}
+                          className={`mt-4 w-full px-3.5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider border transition-all shrink-0 select-none ${systemConfig.maintenanceMode ? 'bg-rose-600 border-rose-600 text-white shadow-md shadow-rose-100' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        >
+                          {systemConfig.maintenanceMode ? 'ĐANG BẬT 🔒 (HỆ THỐNG ĐÃ KHÓA)' : 'ĐANG TẮT 🔓 (MỞ CỬA TỰ DO)'}
+                        </button>
+                      </div>
+
+                      <div className="space-y-2.5 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                        <label className="block text-xs font-black text-slate-800">Thời gian hoàn thành dự kiến</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Ví dụ: BT, 30 phút, 1 giờ, 17:00..."
+                            value={systemConfig.maintenanceTime || ''}
+                            onChange={(e) => {
+                              setSystemConfig(prev => ({ ...prev, maintenanceTime: e.target.value }));
+                            }}
+                            onBlur={() => {
+                              syncSystemSettings({ maintenanceTime: systemConfig.maintenanceTime || 'BT' });
+                              showToast('Đã tự động lưu thời gian hoàn thành dự kiến!', 'success');
+                            }}
+                            className="flex-1 px-3 py-2 border border-slate-250 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              syncSystemSettings({ maintenanceTime: systemConfig.maintenanceTime || 'BT' });
+                              showToast('Đã lưu thời gian hoàn thành dự kiến thành công!', 'success');
+                            }}
+                            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-600 rounded-lg text-xs font-black transition-colors shrink-0"
+                          >
+                            Lưu
+                          </button>
+                        </div>
+                        <span className="block text-[9px] text-slate-405 leading-relaxed mt-2">Ấn "Lưu" hoặc click trỏ chuột ra xa để hoàn tất đồng bộ hóa trực diện lên máy chủ QuizMaster.</span>
+                      </div>
                     </div>
                   </div>
 
@@ -3284,6 +3579,9 @@ export default function App() {
           <p className="text-[10px] text-slate-500">Tích hợp Trợ lý Gemini AI & Thuyết minh giọng nói trực diện vượt trội.</p>
         </div>
       </footer>
+
+        </>
+      )}
 
     </div>
   );
