@@ -418,27 +418,27 @@ export default function App() {
       const localQList = localQStr ? JSON.parse(localQStr) : [];
 
       if (isConnected) {
-        if (serverQuestions.length === 0 && localQList.length > 0) {
-          // AUTO-SYNC: Supabase is empty, but user has local storage questions! Upload them!
-          showToast(`🚀 Phát hiện ${localQList.length} câu hỏi lưu cục bộ. Đang tự động đẩy lên cơ sở dữ liệu Supabase...`, 'info');
+        // Intelligent Sync for Questions: Find local questions that aren't on the server yet
+        const serverIds = new Set(serverQuestions.map((q: any) => q.id));
+        const questionsToUpload = localQList.filter((q: any) => q && q.id && !serverIds.has(q.id));
+
+        if (questionsToUpload.length > 0) {
+          showToast(`🚀 Phát hiện ${questionsToUpload.length} câu hỏi mới tại thiết bị. Đang tự động đẩy lên Supabase...`, 'info');
           const syncRes = await fetch('/api/questions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(localQList)
+            body: JSON.stringify(questionsToUpload)
           });
           if (syncRes.ok) {
-            showToast(`🎉 Đã tự động đồng bộ thành công ${localQList.length} câu hỏi lên Supabase!`, 'success');
+            showToast(`🎉 Đã tự động đồng bộ thành công ${questionsToUpload.length} câu hỏi lên Supabase!`, 'success');
             const qFreshRes = await fetch('/api/questions');
             if (qFreshRes.ok) {
-              const freshData = await qFreshRes.json();
-              setQuestions(freshData);
-              localStorage.setItem('quizmaster_questions', JSON.stringify(freshData));
+              serverQuestions = await qFreshRes.json();
             }
           }
-        } else if (serverQuestions.length > 0) {
-          setQuestions(serverQuestions);
-          localStorage.setItem('quizmaster_questions', JSON.stringify(serverQuestions));
         }
+        setQuestions(serverQuestions);
+        localStorage.setItem('quizmaster_questions', JSON.stringify(serverQuestions));
       } else {
         if (serverQuestions.length > 0) {
           setQuestions(serverQuestions);
@@ -458,8 +458,12 @@ export default function App() {
       const localLeaderboard = localLStr ? JSON.parse(localLStr) : [];
 
       if (isConnected) {
-        if (serverLeaderboard.length === 0 && localLeaderboard.length > 0) {
-          for (const entry of localLeaderboard) {
+        const serverLeaderboardIds = new Set(serverLeaderboard.map((item: any) => item.id));
+        const leaderboardToUpload = localLeaderboard.filter((item: any) => item && item.id && !serverLeaderboardIds.has(item.id));
+
+        if (leaderboardToUpload.length > 0) {
+          showToast(`🚀 Đồng bộ ${leaderboardToUpload.length} bảng điểm từ máy lên Supabase...`, 'info');
+          for (const entry of leaderboardToUpload) {
             await fetch('/api/leaderboard', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -468,14 +472,12 @@ export default function App() {
           }
           const freshLRes = await fetch('/api/leaderboard');
           if (freshLRes.ok) {
-            const freshL = await freshLRes.json();
-            setLeaderboard(freshL);
-            localStorage.setItem('quizmaster_leaderboard', JSON.stringify(freshL));
+            serverLeaderboard = await freshLRes.json();
           }
-        } else {
-          setLeaderboard(serverLeaderboard);
-          localStorage.setItem('quizmaster_leaderboard', JSON.stringify(serverLeaderboard));
+          showToast(`🎉 Hoàn tất đồng bộ bảng điểm!`, 'success');
         }
+        setLeaderboard(serverLeaderboard);
+        localStorage.setItem('quizmaster_leaderboard', JSON.stringify(serverLeaderboard));
       } else {
         if (serverLeaderboard.length > 0) {
           setLeaderboard(serverLeaderboard);
@@ -495,8 +497,12 @@ export default function App() {
       const localRooms = localRStr ? JSON.parse(localRStr) : [];
 
       if (isConnected) {
-        if (serverRooms.length === 0 && localRooms.length > 0) {
-          for (const room of localRooms) {
+        const serverRoomIds = new Set(serverRooms.map((r: any) => r.id));
+        const roomsToUpload = localRooms.filter((r: any) => r && r.id && !serverRoomIds.has(r.id));
+
+        if (roomsToUpload.length > 0) {
+          showToast(`🚀 Đồng bộ ${roomsToUpload.length} phòng thi lên Supabase...`, 'info');
+          for (const room of roomsToUpload) {
             await fetch('/api/exam-rooms', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -505,14 +511,12 @@ export default function App() {
           }
           const freshRRes = await fetch('/api/exam-rooms');
           if (freshRRes.ok) {
-            const freshR = await freshRRes.json();
-            setExamRooms(freshR);
-            localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(freshR));
+            serverRooms = await freshRRes.json();
           }
-        } else {
-          setExamRooms(serverRooms);
-          localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(serverRooms));
+          showToast(`🎉 Đồng bộ phòng thi thành công!`, 'success');
         }
+        setExamRooms(serverRooms);
+        localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(serverRooms));
       } else {
         if (serverRooms.length > 0) {
           setExamRooms(serverRooms);
@@ -532,8 +536,12 @@ export default function App() {
       const localLogs = localHStr ? JSON.parse(localHStr) : [];
 
       if (isConnected) {
-        if (serverLogs.length === 0 && localLogs.length > 0) {
-          for (const log of localLogs) {
+        const serverLogIds = new Set(serverLogs.map((l: any) => l.id));
+        const logsToUpload = localLogs.filter((l: any) => l && l.id && !serverLogIds.has(l.id));
+
+        if (logsToUpload.length > 0) {
+          showToast(`🚀 Đồng bộ ${logsToUpload.length} lịch sử thi lên Supabase...`, 'info');
+          for (const log of logsToUpload) {
             await fetch('/api/exam-history-logs', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -542,14 +550,12 @@ export default function App() {
           }
           const freshHRes = await fetch('/api/exam-history-logs');
           if (freshHRes.ok) {
-            const freshH = await freshHRes.json();
-            setExamHistoryLogs(freshH);
-            localStorage.setItem('quizmaster_history_logs', JSON.stringify(freshH));
+            serverLogs = await freshHRes.json();
           }
-        } else {
-          setExamHistoryLogs(serverLogs);
-          localStorage.setItem('quizmaster_history_logs', JSON.stringify(serverLogs));
+          showToast(`🎉 Đồng bộ lịch sử thi hoàn tất!`, 'success');
         }
+        setExamHistoryLogs(serverLogs);
+        localStorage.setItem('quizmaster_history_logs', JSON.stringify(serverLogs));
       } else {
         if (serverLogs.length > 0) {
           setExamHistoryLogs(serverLogs);

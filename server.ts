@@ -4,6 +4,7 @@ import fs from "fs";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -128,6 +129,119 @@ function getSupabaseClient() {
     return null;
   }
   return createClient(url, key);
+}
+
+// Convert any non-UUID string to a deterministic UUID
+function convertToUUID(str: string): string {
+  if (!str) {
+    return crypto.randomUUID();
+  }
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)) {
+    return str.toLowerCase();
+  }
+  const hash = crypto.createHash("sha1").update(str).digest("hex");
+  const part1 = hash.substring(0, 8);
+  const part2 = hash.substring(8, 12);
+  const part3 = "5" + hash.substring(13, 16);
+  const part4 = "8" + hash.substring(17, 20);
+  const part5 = hash.substring(20, 32);
+  return `${part1}-${part2}-${part3}-${part4}-${part5}`.toLowerCase();
+}
+
+function mapQuestionToSupabase(q: any) {
+  return {
+    id: convertToUUID(q.id),
+    content: q.content,
+    grade: q.grade,
+    category: q.category,
+    stt: q.stt,
+    type: q.type || 'SINGLE',
+    options: q.options,
+    correct_answer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+    explanation: q.explanation
+  };
+}
+
+function mapQuestionFromSupabase(dbQ: any) {
+  return {
+    id: dbQ.id,
+    content: dbQ.content,
+    grade: dbQ.grade,
+    category: dbQ.category,
+    stt: dbQ.stt,
+    type: dbQ.type || 'SINGLE',
+    options: dbQ.options,
+    correctAnswer: typeof dbQ.correct_answer === 'number' ? dbQ.correct_answer : 0,
+    explanation: dbQ.explanation
+  };
+}
+
+function mapLeaderboardToSupabase(l: any) {
+  return {
+    id: convertToUUID(l.id),
+    name: l.name,
+    class: l.class,
+    score: l.score,
+    time_spent: l.time || '0:00',
+    exam_date: l.date || ''
+  };
+}
+
+function mapLeaderboardFromSupabase(dbL: any) {
+  return {
+    id: dbL.id,
+    name: dbL.name,
+    class: dbL.class,
+    score: dbL.score,
+    time: dbL.time_spent,
+    date: dbL.exam_date
+  };
+}
+
+function mapExamRoomToSupabase(r: any) {
+  return {
+    id: convertToUUID(r.id),
+    code: r.code,
+    title: r.title,
+    grade: r.grade,
+    duration: typeof r.duration === 'number' ? r.duration : 45,
+    questions_count: typeof r.questions === 'number' ? r.questions : 15,
+    status: r.status || 'ĐANG CHỜ'
+  };
+}
+
+function mapExamRoomFromSupabase(dbR: any) {
+  return {
+    id: dbR.id,
+    code: dbR.code,
+    title: dbR.title,
+    grade: dbR.grade,
+    duration: dbR.duration,
+    questions: dbR.questions_count,
+    status: dbR.status
+  };
+}
+
+function mapHistoryLogToSupabase(h: any) {
+  return {
+    id: convertToUUID(h.id),
+    student: h.student,
+    grade: h.grade,
+    score: h.score,
+    duration: h.duration,
+    exam_date: h.date || ''
+  };
+}
+
+function mapHistoryLogFromSupabase(dbH: any) {
+  return {
+    id: dbH.id,
+    student: dbH.student,
+    grade: dbH.grade,
+    score: dbH.score,
+    duration: dbH.duration,
+    date: dbH.exam_date
+  };
 }
 
 // SQL code representation
@@ -326,28 +440,28 @@ app.post("/api/supabase/seed", async (req, res) => {
     const { data: qs } = await client.from("questions").select("id").limit(1);
     if (!qs || qs.length === 0) {
       console.log("Seeding questions...");
-      await client.from("questions").insert(local.questions);
+      await client.from("questions").insert(local.questions.map(mapQuestionToSupabase));
     }
 
     // Check leaderboard
     const { data: lbs } = await client.from("leaderboard").select("id").limit(1);
     if (!lbs || lbs.length === 0) {
       console.log("Seeding leaderboard...");
-      await client.from("leaderboard").insert(local.leaderboard);
+      await client.from("leaderboard").insert(local.leaderboard.map(mapLeaderboardToSupabase));
     }
 
     // Check exam_rooms
     const { data: rms } = await client.from("exam_rooms").select("id").limit(1);
     if (!rms || rms.length === 0) {
       console.log("Seeding exam rooms...");
-      await client.from("exam_rooms").insert(local.examRooms);
+      await client.from("exam_rooms").insert(local.examRooms.map(mapExamRoomToSupabase));
     }
 
     // Check logs
     const { data: logs } = await client.from("exam_history_logs").select("id").limit(1);
     if (!logs || logs.length === 0) {
       console.log("Seeding history logs...");
-      await client.from("exam_history_logs").insert(local.examHistoryLogs);
+      await client.from("exam_history_logs").insert(local.examHistoryLogs.map(mapHistoryLogToSupabase));
     }
 
     return res.json({ success: true, message: "Đồng bộ hóa dữ liệu mặc định thành công lên Supabase!" });
@@ -367,25 +481,18 @@ app.get("/api/questions", async (req, res) => {
           const local = loadLocalDb();
           if (local.questions && local.questions.length > 0) {
             console.log("Auto-seeding empty Supabase queries table...");
-            await client.from("questions").upsert(
-              local.questions.map((q: any) => ({
-                id: q.id,
-                content: q.content,
-                grade: q.grade,
-                category: q.category,
-                stt: q.stt,
-                type: q.type || 'SINGLE',
-                options: q.options,
-                correctAnswer: q.correctAnswer,
-                explanation: q.explanation
-              }))
-            );
+            const mapped = local.questions.map(mapQuestionToSupabase);
+            await client.from("questions").upsert(mapped);
             return res.json(local.questions);
           }
         }
-        return res.json(data);
+        return res.json(data.map(mapQuestionFromSupabase));
+      } else if (error) {
+        console.error("GET questions error:", error);
       }
-    } catch (_) {}
+    } catch (err) {
+      console.error("GET questions exception:", err);
+    }
   }
   // Fallback to local file json
   const local = loadLocalDb();
@@ -399,29 +506,22 @@ app.post("/api/questions", async (req, res) => {
 
   for (const item of items) {
     if (!item.id) {
-      item.id = "q_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+      item.id = convertToUUID("q_" + Date.now() + "_" + Math.floor(Math.random() * 1000));
+    } else {
+      item.id = convertToUUID(item.id);
     }
   }
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const payload = items.map(item => ({
-        id: item.id,
-        content: item.content,
-        grade: item.grade,
-        category: item.category,
-        stt: item.stt,
-        type: item.type || 'SINGLE',
-        options: item.options,
-        correctAnswer: item.correctAnswer,
-        explanation: item.explanation
-      }));
+      const payload = items.map(mapQuestionToSupabase);
 
       // Upsert multiple questions in one single call!
-      const { data, error } = await client.from("questions").upsert(payload);
+      const { error } = await client.from("questions").upsert(payload);
 
       if (!error) {
+        // Return successfully with mutated UUID ids so client updates accordingly
         return res.json({ success: true, ids: items.map(i => i.id) });
       } else {
         console.error("Supabase upsert questions error:", error);
@@ -434,7 +534,7 @@ app.post("/api/questions", async (req, res) => {
   // Backup to local db
   const local = loadLocalDb();
   for (const item of items) {
-    const index = local.questions.findIndex((q: any) => q.id === item.id);
+    const index = local.questions.findIndex((q: any) => convertToUUID(q.id) === item.id || q.id === item.id);
     if (index >= 0) {
       local.questions[index] = item;
     } else {
@@ -447,19 +547,22 @@ app.post("/api/questions", async (req, res) => {
 
 app.delete("/api/questions/:id", async (req, res) => {
   const { id } = req.params;
+  const mappedId = convertToUUID(id);
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client.from("questions").delete().eq("id", id);
+      const { error } = await client.from("questions").delete().eq("id", mappedId);
       if (!error) {
         return res.json({ success: true });
+      } else {
+        console.error("Delete question error:", error);
       }
     } catch (_) {}
   }
 
   // Backup local db
   const local = loadLocalDb();
-  local.questions = local.questions.filter((q: any) => q.id !== id);
+  local.questions = local.questions.filter((q: any) => convertToUUID(q.id) !== mappedId && q.id !== id);
   saveLocalDb(local);
   res.json({ success: true });
 });
@@ -475,11 +578,12 @@ app.get("/api/leaderboard", async (req, res) => {
           const local = loadLocalDb();
           if (local.leaderboard && local.leaderboard.length > 0) {
             console.log("Auto-seeding empty Supabase leaderboard list...");
-            await client.from("leaderboard").insert(local.leaderboard);
+            const mapped = local.leaderboard.map(mapLeaderboardToSupabase);
+            await client.from("leaderboard").insert(mapped);
             return res.json(local.leaderboard);
           }
         }
-        return res.json(data);
+        return res.json(data.map(mapLeaderboardFromSupabase));
       }
     } catch (_) {}
   }
@@ -489,40 +593,39 @@ app.get("/api/leaderboard", async (req, res) => {
 app.post("/api/leaderboard", async (req, res) => {
   const record = req.body;
   if (!record.id) {
-    record.id = "l_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+    record.id = convertToUUID("l_" + Date.now() + "_" + Math.floor(Math.random() * 1000));
+  } else {
+    record.id = convertToUUID(record.id);
   }
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client.from("leaderboard").insert({
-        id: record.id,
-        rank: record.rank,
-        name: record.name,
-        class: record.class,
-        score: record.score,
-        time: record.time,
-        date: record.date
-      });
+      const payload = mapLeaderboardToSupabase(record);
+      const { error } = await client.from("leaderboard").insert(payload);
       if (!error) {
-        return res.json({ success: true });
+        return res.json({ success: true, id: record.id });
+      } else {
+        console.error("Leaderboard insert error:", error);
       }
     } catch (_) {}
   }
 
   const local = loadLocalDb();
+  local.leaderboard = local.leaderboard.filter((i: any) => convertToUUID(i.id) !== record.id && i.id !== record.id);
   local.leaderboard.push(record);
   local.leaderboard.sort((a: any, b: any) => b.score - a.score);
   saveLocalDb(local);
-  res.json({ success: true });
+  res.json({ success: true, id: record.id });
 });
 
 app.delete("/api/leaderboard/:id", async (req, res) => {
   const { id } = req.params;
+  const mappedId = convertToUUID(id);
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client.from("leaderboard").delete().eq("id", id);
+      const { error } = await client.from("leaderboard").delete().eq("id", mappedId);
       if (!error) {
         return res.json({ success: true });
       }
@@ -530,7 +633,7 @@ app.delete("/api/leaderboard/:id", async (req, res) => {
   }
 
   const local = loadLocalDb();
-  local.leaderboard = local.leaderboard.filter((item: any) => item.id !== id);
+  local.leaderboard = local.leaderboard.filter((item: any) => convertToUUID(item.id) !== mappedId && item.id !== id);
   saveLocalDb(local);
   res.json({ success: true });
 });
@@ -546,11 +649,12 @@ app.get("/api/exam-rooms", async (req, res) => {
           const local = loadLocalDb();
           if (local.examRooms && local.examRooms.length > 0) {
             console.log("Auto-seeding empty Supabase exam rooms...");
-            await client.from("exam_rooms").insert(local.examRooms);
+            const mapped = local.examRooms.map(mapExamRoomToSupabase);
+            await client.from("exam_rooms").insert(mapped);
             return res.json(local.examRooms);
           }
         }
-        return res.json(data);
+        return res.json(data.map(mapExamRoomFromSupabase));
       }
     } catch (_) {}
   }
@@ -560,29 +664,26 @@ app.get("/api/exam-rooms", async (req, res) => {
 app.post("/api/exam-rooms", async (req, res) => {
   const room = req.body;
   if (!room.id) {
-    room.id = "room_" + Date.now();
+    room.id = convertToUUID("room_" + Date.now() + "_" + Math.floor(Math.random() * 1000));
+  } else {
+    room.id = convertToUUID(room.id);
   }
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client.from("exam_rooms").insert({
-        id: room.id,
-        code: room.code,
-        title: room.title,
-        grade: room.grade,
-        duration: room.duration,
-        questions: room.questions,
-        studentsCount: room.studentsCount || 0,
-        status: room.status || 'ĐANG CHỜ'
-      });
+      const payload = mapExamRoomToSupabase(room);
+      const { error } = await client.from("exam_rooms").insert(payload);
       if (!error) {
         return res.json({ success: true, id: room.id });
+      } else {
+        console.error("Exam room insert error:", error);
       }
     } catch (_) {}
   }
 
   const local = loadLocalDb();
+  local.examRooms = local.examRooms.filter((r: any) => convertToUUID(r.id) !== room.id && r.id !== room.id);
   local.examRooms.unshift(room);
   saveLocalDb(local);
   res.json({ success: true, id: room.id });
@@ -599,11 +700,12 @@ app.get("/api/exam-history-logs", async (req, res) => {
           const local = loadLocalDb();
           if (local.examHistoryLogs && local.examHistoryLogs.length > 0) {
             console.log("Auto-seeding empty Supabase logs...");
-            await client.from("exam_history_logs").insert(local.examHistoryLogs);
+            const mapped = local.examHistoryLogs.map(mapHistoryLogToSupabase);
+            await client.from("exam_history_logs").insert(mapped);
             return res.json(local.examHistoryLogs);
           }
         }
-        return res.json(data);
+        return res.json(data.map(mapHistoryLogFromSupabase));
       }
     } catch (_) {}
   }
@@ -613,30 +715,29 @@ app.get("/api/exam-history-logs", async (req, res) => {
 app.post("/api/exam-history-logs", async (req, res) => {
   const log = req.body;
   if (!log.id) {
-    log.id = "log_" + Date.now();
+    log.id = convertToUUID("log_" + Date.now() + "_" + Math.floor(Math.random() * 1000));
+  } else {
+    log.id = convertToUUID(log.id);
   }
 
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client.from("exam_history_logs").insert({
-        id: log.id,
-        student: log.student,
-        grade: log.grade,
-        score: log.score,
-        duration: log.duration,
-        date: log.date
-      });
+      const payload = mapHistoryLogToSupabase(log);
+      const { error } = await client.from("exam_history_logs").insert(payload);
       if (!error) {
-        return res.json({ success: true });
+        return res.json({ success: true, id: log.id });
+      } else {
+        console.error("Exam history log insert error:", error);
       }
     } catch (_) {}
   }
 
   const local = loadLocalDb();
+  local.examHistoryLogs = local.examHistoryLogs.filter((h: any) => convertToUUID(h.id) !== log.id && h.id !== log.id);
   local.examHistoryLogs.unshift(log);
   saveLocalDb(local);
-  res.json({ success: true });
+  res.json({ success: true, id: log.id });
 });
 
 
