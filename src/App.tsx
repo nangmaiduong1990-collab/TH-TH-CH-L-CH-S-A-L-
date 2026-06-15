@@ -380,6 +380,7 @@ export default function App() {
   const [supabaseStatus, setSupabaseStatus] = useState({
     configured: false,
     connected: false,
+    host: '',
     message: 'Đang kiểm tra kết nối hệ thống dữ liệu...',
     counts: { questions: 0, leaderboard: 0, examRooms: 0, examHistoryLogs: 0 },
     sql: ''
@@ -3046,177 +3047,125 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               )}
 
               {activeAdminTab === 'supabase' && (
-                <div className="space-y-6">
-                  {/* Vercel Deployment & Supabase Persistent Guide */}
-                  <div className="p-5 rounded-2xl border border-indigo-150 bg-indigo-55/10 bg-indigo-50/50 space-y-3.5 shadow-sm">
-                    <h4 className="text-xs font-black text-indigo-950 uppercase tracking-tight flex items-center gap-1.5 leading-none">
-                      💡 Hướng dẫn cứu sống dữ liệu đề khi đưa lên Vercel
-                    </h4>
-                    <p className="text-xs text-indigo-900 leading-normal">
-                      Khi lưu đề câu hỏi mà thấy trên Vercel không thay đổi, đó là do hệ thống lưu trữ tạm thời (Local DB) của Vercel chạy dưới dạng Serverless <strong>sẽ tự động khôi phục và xóa tài liệu</strong> sau vài phút hoạt động. Bạn cần liên kết hệ thống với dịch vụ cơ sở dữ liệu vĩnh cửu <strong>Supabase</strong> theo các bước tự động hóa sau:
-                    </p>
-                    <div className="text-xs text-indigo-950 space-y-2 bg-white/90 p-4 rounded-xl border border-indigo-100 font-semibold shadow-inner">
-                      <p className="font-extrabold text-[12px] text-indigo-900 flex items-center gap-1 leading-none">⚙️ Chỉ mất 2 phút thiết lập:</p>
-                      <p className="pl-1">• <strong>Bước 1:</strong> Đăng ký tài khoản miễn phí tại <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 underline">supabase.com</a> và bấm Tạo mới Dự án (New Project).</p>
-                      <p className="pl-1">• <strong>Bước 2:</strong> Copy mã SQL đen mờ ở cuối trang này, bấm vào phần <strong>SQL Editor</strong> tại thanh điều hướng trái của Supabase và bấm <strong>Run</strong> để tạo bảng.</p>
-                      <p className="pl-1">• <strong>Bước 3:</strong> Vào bảng điều khiển của <strong>Vercel (Vercel Dashboard) &gt; Settings &gt; Environment Variables</strong> của dự án, rồi thêm hai (2) biến môi trường sau:</p>
-                      
-                      <div className="pl-4 font-mono text-[10.5px] space-y-1.5 select-all py-2.5 px-3 text-emerald-800 bg-emerald-50 border border-emerald-100 rounded-lg mt-1 font-bold">
-                        <p>🔹 <strong className="text-zinc-900">SUPABASE_URL</strong> = (Tìm thấy ở ô Project Settings &gt; API trên Supabase)</p>
-                        <p>🔹 <strong className="text-zinc-900">SUPABASE_ANON_KEY</strong> = (Khóa bảo mật Anon Key tìm thấy ở API trên Supabase)</p>
-                      </div>
-                      
-                      <p className="mt-2 text-indigo-900 text-[11px] font-bold">
-                        👉 Hoàn tất: Bấm <strong>Re-deploy</strong> lại dự án trên Vercel. Toàn bộ đề câu hỏi khi bạn tải lên hay nạp tệp JSON sẽ được tải thẳng lên cơ sở dữ liệu và lưu giữ vĩnh viễn ở Vercel!
-                      </p>
-                    </div>
-                  </div>
-
+                <div className="space-y-6 animate-fadeIn">
                   {/* Connection Header Box */}
-                  <div className={`p-5 rounded-2xl border ${supabaseStatus.connected ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/50 border-amber-200'} shadow-sm`}>
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className={`relative flex h-3.5 w-3.5`}>
-                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${supabaseStatus.connected ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-                            <span className={`relative inline-flex rounded-full h-3.5 w-3.5 ${supabaseStatus.connected ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                          </span>
-                          <h3 className="font-sans font-black text-slate-900 tracking-tight text-sm uppercase">
-                            Hệ thống Supabase: {supabaseStatus.connected ? 'ĐÃ LIÊN KẾT THÀNH CÔNG' : 'CHẾ ĐỘ DẬP NỔI THAY THẾ (LOCAL FALLBACK)'}
+                  <div className={`p-6 rounded-2xl border ${supabaseStatus.connected ? 'bg-gradient-to-br from-emerald-50 to-teal-50/30 border-emerald-200' : 'bg-gradient-to-br from-zinc-50 to-slate-50 border-zinc-200'} shadow-sm`}>
+                    <div className="space-y-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="relative flex h-3 w-3">
+                              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${supabaseStatus.connected ? 'bg-emerald-400' : 'bg-zinc-400'}`}></span>
+                              <span className={`relative inline-flex rounded-full h-3 w-3 ${supabaseStatus.connected ? 'bg-emerald-500' : 'bg-zinc-500'}`}></span>
+                            </span>
+                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Trạng Thái Kết Nối</span>
+                          </div>
+                          
+                          <h3 className="font-sans font-black text-slate-900 tracking-tight text-xl uppercase leading-tight">
+                            {supabaseStatus.connected ? 'Đã liên kết cơ sở dữ liệu cloud' : 'Chế độ lưu trữ tạm thời (Local Fallback)'}
                           </h3>
                         </div>
-                        <p className="text-xs text-slate-600 font-medium">
-                          {supabaseStatus.message}
-                        </p>
+
+                        <div className="flex items-center gap-2">
+                          <button 
+                            onClick={async () => {
+                              showToast('Đang kiểm tra kết nối...', 'info');
+                              await checkSupabaseStatus();
+                              await loadDatabaseData();
+                              showToast('Đã quét cập nhật trạng thái mới nhất!', 'success');
+                            }}
+                            className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
+                          >
+                            🔄 Quét lại liên kết
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button 
-                          onClick={async () => {
-                            showToast('Đang quét liên kết dữ liệu...', 'info');
-                            await checkSupabaseStatus();
-                            await loadDatabaseData();
-                            showToast('Đã cập nhật trạng thái kết nối!', 'success');
-                          }}
-                          className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-black transition-colors"
-                        >
-                          🔄 Thử lại liên kết
-                        </button>
+
+                      {/* Display what Supabase is connected to */}
+                      <div className="bg-white p-4 rounded-xl border border-slate-150/85 space-y-3 shadow-inner">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+                          <span className="text-xs font-bold text-slate-500">Mã nguồn kết nối (Supabase Host):</span>
+                          {supabaseStatus.connected ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-55/30 text-emerald-800 text-xs font-mono font-black border border-emerald-100 rounded-lg">
+                              ⚡ {supabaseStatus.host || 'supabase.co'}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-55/30 text-amber-800 text-xs font-mono font-black border border-amber-100 rounded-lg">
+                              ⚠️ local_db.json (Offline)
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="text-xs text-slate-600 font-semibold leading-relaxed">
+                          {supabaseStatus.connected ? (
+                            <p>
+                              🎉 <strong>Hệ thống đang hoạt động ở chế độ ĐỒNG BỘ CLOUD VĨNH VIỄN!</strong> Mọi dữ liệu (Ngân hàng đề câu hỏi, phòng thi, câu hỏi được tạo tự động bởi AI, lịch sử thi cử, bảng xếp hạng của học sinh) đều được <strong>tự động lưu trữ và đẩy trực tiếp lên Cloud</strong> theo thời gian thực mà không yêu cầu bạn thực hiện thao tác thủ công nào.
+                            </p>
+                          ) : (
+                            <p>
+                              ⚠️ Ứng dụng hiện đang bản sao lưu trữ trực tiếp vào tệp lưu cục bộ của máy chủ (local storage). Để dữ liệu không bị khôi phục đặt lại trên nền tảng Vercel, hãy thiết lập biến môi trường <code>SUPABASE_URL</code> và <code>SUPABASE_ANON_KEY</code>.
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Schema Summary Metrics */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {[
-                      { title: 'Ngân hàng đề', key: 'questions', icon: '📚', desc: 'Bộ câu hỏi thi đấu' },
-                      { title: 'Bảng xếp hạng', key: 'leaderboard', icon: '🏆', desc: 'Thành tích vinh danh' },
-                      { title: 'Phòng thi đấu', key: 'examRooms', icon: '🏟️', desc: 'Mã phòng trực tiếp' },
-                      { title: 'Nhật ký thi đấu', key: 'examHistoryLogs', icon: '📜', desc: 'Lịch sử học trình' }
-                    ].map(metric => (
-                      <div key={metric.key} className="bg-white p-4 rounded-xl border border-slate-150 shadow-sm text-center space-y-1.5">
-                        <div className="text-xl">{metric.icon}</div>
-                        <span className="block text-[9px] text-slate-400 font-extrabold uppercase tracking-widest">{metric.title}</span>
-                        <span className="block text-2xl font-black text-indigo-700">
-                          {supabaseStatus.counts[metric.key as keyof typeof supabaseStatus.counts] !== undefined ? supabaseStatus.counts[metric.key as keyof typeof supabaseStatus.counts] : 0}
-                        </span>
-                        <span className="block text-[10px] text-slate-400 font-semibold">{metric.desc}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Seed and Actions Box */}
-                  <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-3.5">
-                    <h4 className="text-xs font-black uppercase text-slate-900 leading-none">Châm mầm dữ liệu hệ thống (Seeding Engine)</h4>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Nếu hệ quản trị cơ sở dữ liệu Supabase của bạn đang trống không hoặc chưa có câu hỏi nào hoạt động, hãy nhấp vào nút dưới đây để kích hoạt nạp bộ câu hỏi Lịch sử - Địa lí lớp 6, 7, 8, 9 mặc định cùng lịch sử thi đua thử nghiệm. Dữ liệu sẽ được lưu trực tiếp vào Supabase và đồng bộ về máy chủ.
-                    </p>
-                    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-                      <button 
-                        onClick={async () => {
-                          try {
-                            showToast('Đang châm nguồn dữ liệu mầm vào cơ sở dữ liệu...', 'info');
-                            const res = await fetch('/api/supabase/seed', { method: 'POST' });
-                            const data = await res.json();
-                            if (res.ok) {
-                              showToast('🌱 Đã gieo mầm dữ liệu thành công!', 'success');
-                              checkSupabaseStatus();
-                              loadDatabaseData();
-                            } else {
-                              showToast(`Thao tác không hoàn tất: ${data.message}`, 'error');
-                            }
-                          } catch (err) {
-                            showToast('Không thể kết nối máy chủ gieo mầm.', 'error');
-                          }
-                        }}
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-lg transition-colors shadow-sm cursor-pointer select-none"
-                      >
-                        🌱 Khởi tạo dữ liệu gieo mầm mặc định (Seed DB)
-                      </button>
-
-                      <button
-                        onClick={async () => {
-                          try {
-                            if (!questions || questions.length === 0) {
-                              showToast('Không có câu hỏi nào hiện tại để đồng bộ!', 'warning');
-                              return;
-                            }
-                            showToast(`Đang đẩy ${questions.length} câu hỏi hiện tại lên Supabase...`, 'info');
-                            const res = await fetch('/api/questions', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify(questions)
-                            });
-                            const data = await res.json().catch(() => ({}));
-                            if (res.ok && data.success) {
-                              showToast(`📤 Đã đồng bộ thành công ${questions.length} câu hỏi hiện tại lên Supabase!`, 'success');
-                              checkSupabaseStatus();
-                            } else {
-                              showToast(`❌ Lỗi đồng bộ: ${data.error || 'Yêu cầu thất bại'}`, 'error');
-                            }
-                          } catch (err: any) {
-                            showToast(`❌ Lỗi kết nối: ${err.message || 'Không thể liên lạc máy chủ'}`, 'error');
-                          }
-                        }}
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg transition-colors shadow-sm cursor-pointer select-none"
-                      >
-                        📤 Đẩy toàn bộ đề thi hiện tại lên Supabase
-                      </button>
+                  <div className="space-y-2.5">
+                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Số lượng bản ghi đồng bộ thực tế</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {[
+                        { title: 'Ngân hàng đề', key: 'questions', icon: '📚', desc: 'Bộ câu hỏi thi đấu' },
+                        { title: 'Bảng xếp hạng', key: 'leaderboard', icon: '🏆', desc: 'Thành tích vinh danh' },
+                        { title: 'Phòng thi đấu', key: 'examRooms', icon: '🏟️', desc: 'Mã phòng trực tiếp' },
+                        { title: 'Nhật ký thi đấu', key: 'examHistoryLogs', icon: '📜', desc: 'Lịch sử học trình' }
+                      ].map(metric => (
+                        <div key={metric.key} className="bg-white p-4 rounded-xl border border-slate-150 shadow-sm text-center space-y-1.5">
+                          <div className="text-2xl">{metric.icon}</div>
+                          <span className="block text-[9px] text-slate-400 font-extrabold uppercase tracking-widest">{metric.title}</span>
+                          <span className="block text-2xl font-black text-indigo-700">
+                            {supabaseStatus.counts[metric.key as keyof typeof supabaseStatus.counts] !== undefined ? supabaseStatus.counts[metric.key as keyof typeof supabaseStatus.counts] : 0}
+                          </span>
+                          <span className="block text-[10px] text-slate-400 font-semibold">{metric.desc}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* SQL scripts for manual creation */}
-                  <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                      <div>
-                        <h4 className="text-xs font-black uppercase text-slate-900">Mã thiết lập SQL nhập vào Supabase SQL Editor</h4>
-                        <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sao chép mã lệnh bên dưới và chạy trong bảng điều khiển SQL Editor của Supabase để tự động tạo cấu trúc bảng chính xác.</p>
+                  {/* Tiny collapsible SQL reference container */}
+                  <details className="group border border-slate-250/70 rounded-xl bg-white overflow-hidden shadow-sm">
+                    <summary className="flex items-center justify-between p-4 cursor-pointer select-none text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                      <span>🛠️ Hiển thị cấu trúc cơ sở dữ liệu SQL (Nếu muốn chạy lại trên Supabase SQL Editor)</span>
+                      <span className="transition-transform group-open:rotate-180 text-xs">▼</span>
+                    </summary>
+                    <div className="p-4 border-t border-slate-150 bg-slate-50 space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-[10px] text-slate-500 font-semibold">Sao chép mã SQL để khởi tạo bảng nếu bạn kết nối kết cấu Supabase mới tinh.</p>
+                        <button 
+                          onClick={() => {
+                            try {
+                              const sqlArea = document.createElement('textarea');
+                              sqlArea.value = supabaseStatus.sql || '';
+                              document.body.appendChild(sqlArea);
+                              sqlArea.select();
+                              document.execCommand('copy');
+                              document.body.removeChild(sqlArea);
+                              showToast('📋 Đã sao chép mã lệnh SQL thành công!', 'success');
+                            } catch {
+                              showToast('Lỗi sao chép tự động.', 'error');
+                            }
+                          }}
+                          className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[10px] px-3 py-1.5 rounded-lg uppercase transition-colors shrink-0"
+                        >
+                          📋 Sao chép mã SQL
+                        </button>
                       </div>
-                      <button 
-                        onClick={() => {
-                          try {
-                            const sqlArea = document.createElement('textarea');
-                            sqlArea.value = supabaseStatus.sql || '';
-                            document.body.appendChild(sqlArea);
-                            sqlArea.select();
-                            document.execCommand('copy');
-                            document.body.removeChild(sqlArea);
-                            showToast('📋 Đã sao chép mã lệnh SQL thành công!', 'success');
-                          } catch {
-                            showToast('Lỗi sao chép tự động.', 'error');
-                          }
-                        }}
-                        className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-black text-[10px] px-3 py-1.5 rounded-lg border border-indigo-100 uppercase transition-colors shrink-0"
-                      >
-                        📋 Sao chép mã SQL
-                      </button>
-                    </div>
-
-                    <div className="relative group">
-                      <pre className="p-4 bg-slate-950 text-emerald-400 font-mono text-[10px] rounded-xl overflow-x-auto max-h-80 border border-slate-900 scrollbar-thin select-all">
+                      <pre className="p-4 bg-slate-950 text-emerald-400 font-mono text-[9px] rounded-lg overflow-x-auto max-h-52 border border-slate-900 scrollbar-thin select-all">
                         <code>{supabaseStatus.sql}</code>
                       </pre>
                     </div>
-                  </div>
+                  </details>
                 </div>
               )}
                 </>

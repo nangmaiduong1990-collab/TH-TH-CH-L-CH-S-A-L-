@@ -209,10 +209,23 @@ app.get("/api/supabase/status", async (req, res) => {
   const key = process.env.SUPABASE_ANON_KEY || "";
   const hasEnv = !!(url && key);
 
+  let host = "";
+  try {
+    if (url) {
+      const u = new URL(url);
+      host = u.hostname;
+    }
+  } catch (e) {
+    if (url) {
+      host = url.split("://")[1]?.split("/")[0] || url;
+    }
+  }
+
   if (!hasEnv) {
     return res.json({
       configured: false,
       connected: false,
+      host: "",
       message: "Chưa cấu hình SUPABASE_URL và SUPABASE_ANON_KEY trong bảng Secrets của AI Studio.",
       sql: SUPABASE_SQL_SETUP,
       error: "Missing credentials"
@@ -224,6 +237,7 @@ app.get("/api/supabase/status", async (req, res) => {
     return res.json({
       configured: true,
       connected: false,
+      host: host,
       message: "Không thể khởi tạo client Supabase. Kiểm tra lại chuỗi liên kết.",
       sql: SUPABASE_SQL_SETUP,
       error: "Client init failed"
@@ -238,6 +252,7 @@ app.get("/api/supabase/status", async (req, res) => {
       return res.json({
         configured: true,
         connected: false,
+        host: host,
         message: `Kết nối thành công nhưng gặp lỗi cấu trúc bảng: ${qErr.message}. Vui lòng nhập mã lệnh SQL phía dưới vào Supabase Sql Editor để khởi tạo các bảng dữ liệu!`,
         sql: SUPABASE_SQL_SETUP,
         error: qErr.message
@@ -258,6 +273,7 @@ app.get("/api/supabase/status", async (req, res) => {
       return res.json({
         configured: true,
         connected: false,
+        host: host,
         message: `Thiếu định dạng các bảng: ${missingTables.join(", ")}. Hãy chạy lệnh SQL thiết lập cơ sở dữ liệu trên Supabase SQL Editor.`,
         sql: SUPABASE_SQL_SETUP,
         error: `Missing tables: ${missingTables.join(", ")}`
@@ -274,6 +290,7 @@ app.get("/api/supabase/status", async (req, res) => {
       configured: true,
       connected: true,
       url: url,
+      host: host,
       message: "🎉 Thiết lập kết nối cơ sở dữ liệu Supabase chính xác và trực quan!",
       counts: {
         questions: countQ || 0,
@@ -287,6 +304,7 @@ app.get("/api/supabase/status", async (req, res) => {
     return res.json({
       configured: true,
       connected: false,
+      host: host,
       message: "Có ngoại lệ xảy ra khi kết nối Supabase: " + err.message,
       sql: SUPABASE_SQL_SETUP,
       error: err.message
@@ -345,6 +363,26 @@ app.get("/api/questions", async (req, res) => {
     try {
       const { data, error } = await client.from("questions").select("*").order("created_at", { ascending: false });
       if (!error && data) {
+        if (data.length === 0) {
+          const local = loadLocalDb();
+          if (local.questions && local.questions.length > 0) {
+            console.log("Auto-seeding empty Supabase queries table...");
+            await client.from("questions").upsert(
+              local.questions.map((q: any) => ({
+                id: q.id,
+                content: q.content,
+                grade: q.grade,
+                category: q.category,
+                stt: q.stt,
+                type: q.type || 'SINGLE',
+                options: q.options,
+                correctAnswer: q.correctAnswer,
+                explanation: q.explanation
+              }))
+            );
+            return res.json(local.questions);
+          }
+        }
         return res.json(data);
       }
     } catch (_) {}
@@ -433,6 +471,14 @@ app.get("/api/leaderboard", async (req, res) => {
     try {
       const { data, error } = await client.from("leaderboard").select("*").order("score", { ascending: false });
       if (!error && data) {
+        if (data.length === 0) {
+          const local = loadLocalDb();
+          if (local.leaderboard && local.leaderboard.length > 0) {
+            console.log("Auto-seeding empty Supabase leaderboard list...");
+            await client.from("leaderboard").insert(local.leaderboard);
+            return res.json(local.leaderboard);
+          }
+        }
         return res.json(data);
       }
     } catch (_) {}
@@ -496,7 +542,14 @@ app.get("/api/exam-rooms", async (req, res) => {
     try {
       const { data, error } = await client.from("exam_rooms").select("*").order("created_at", { ascending: false });
       if (!error && data) {
-        // map db keys if needed
+        if (data.length === 0) {
+          const local = loadLocalDb();
+          if (local.examRooms && local.examRooms.length > 0) {
+            console.log("Auto-seeding empty Supabase exam rooms...");
+            await client.from("exam_rooms").insert(local.examRooms);
+            return res.json(local.examRooms);
+          }
+        }
         return res.json(data);
       }
     } catch (_) {}
@@ -542,6 +595,14 @@ app.get("/api/exam-history-logs", async (req, res) => {
     try {
       const { data, error } = await client.from("exam_history_logs").select("*").order("created_at", { ascending: false });
       if (!error && data) {
+        if (data.length === 0) {
+          const local = loadLocalDb();
+          if (local.examHistoryLogs && local.examHistoryLogs.length > 0) {
+            console.log("Auto-seeding empty Supabase logs...");
+            await client.from("exam_history_logs").insert(local.examHistoryLogs);
+            return res.json(local.examHistoryLogs);
+          }
+        }
         return res.json(data);
       }
     } catch (_) {}
