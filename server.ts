@@ -742,6 +742,129 @@ app.post("/api/exam-history-logs", async (req, res) => {
 
 
 // API ROUTES FOR GEMINI
+app.post("/api/generate-multiple-questions", async (req, res) => {
+  try {
+    const { prompt, grade } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ error: "Nội dung tài liệu thô để sinh câu hỏi trống!" });
+    }
+
+    if (!apiKey) {
+      return res.status(500).json({ 
+        error: "GEMINI_API_KEY chưa được cấu hình trong bảng Secrets!" 
+      });
+    }
+
+    // We will generate three types: SINGLE (Trắc nghiệm), TRUE FALSE, SHORT_ANSWER.
+    // To get as close to 60 questions each as possible, we do parallel calls.
+    // Each call asks for up to 60 detailed, unique, high-quality questions on every detail of the document text.
+    
+    const generateType = async (type: 'SINGLE' | 'TRUE FALSE' | 'SHORT_ANSWER', typeName: string, num: number) => {
+      let formatSchema = "";
+      if (type === 'SINGLE') {
+        formatSchema = `{
+  "content": "Nội dung câu hỏi trắc nghiệm một lựa chọn rõ ràng và sâu sắc",
+  "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
+  "type": "SINGLE",
+  "grade": "${grade || '9'}",
+  "options": [
+    { "text": "Phương án A", "link": "", "image": "" },
+    { "text": "Phương án B", "link": "", "image": "" },
+    { "text": "Phương án C", "link": "", "image": "" },
+    { "text": "Phương án D", "link": "", "image": "" }
+  ],
+  "correctAnswer": 0,
+  "explanation": "Giải thích tại sao phương án được chọn là đúng nhằm mục đích học tập."
+}`;
+      } else if (type === 'TRUE FALSE') {
+        formatSchema = `{
+  "content": "Nhận định lịch sử hoặc địa lí cần học sinh xác định Đúng hay Sai",
+  "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
+  "type": "TRUE FALSE",
+  "grade": "${grade || '9'}",
+  "options": [
+    { "text": "Đúng", "link": "", "image": "" },
+    { "text": "Sai", "link": "", "image": "" }
+  ],
+  "correctAnswer": 0,
+  "explanation": "Giải thích chi tiết tại sao nhận định này là Đúng hoặc Sai."
+}`;
+      } else if (type === 'SHORT_ANSWER') {
+        formatSchema = `{
+  "content": "Câu hỏi yêu cầu câu trả lời ngắn dưới dạng một cụm từ, con số hoặc mốc lịch sử ngắn gọn",
+  "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
+  "type": "SHORT_ANSWER",
+  "grade": "${grade || '9'}",
+  "options": [],
+  "correctAnswer": "Câu trả lời đúng ngắn gọn (ví dụ: '1945' hoặc 'Hồ Chí Minh')",
+  "explanation": "Giải thích ngắn gọn ý nghĩa thông tin câu trả lời."
+}`;
+      }
+
+      const systemPrompt = `Bạn là một chuyên gia khảo thí thiết kế đề thi môn Lịch sử và Địa lí xuất sắc cấp THCS.
+Nhiệm vụ: Hãy nghiên cứu kỹ văn bản tài liệu học tập được cung cấp, sau đó soạn thảo và sinh ra danh sách tối đa ${num} câu hỏi thuộc loại [${typeName}] cực kỳ chất lượng, bám sát từng sự kiện, địa danh, mốc thời gian, số liệu có trong văn bản.
+Khai thác triệt để: Hãy cố gắng tạo ra số lượng câu hỏi nhiều nhất có thể (lý tưởng nhất là từ 40 đến ${num} câu hỏi độc lập, không trùng lặp) bằng cách đặt câu hỏi chi tiết về từng câu văn, mỗi đoạn và chi tiết nhỏ trong bài đọc.
+
+Cấu trúc từng câu hỏi trong mảng JSON phải đúng 100% định dạng schema sau:
+${formatSchema}
+
+* Lưu ý đặc biệt:
+1. "correctAnswer" đối với loại SINGLE là index số nguyên của mảng options (bắt đầu từ 0). Đối với TRUE FALSE là 0 (Đúng) hoặc 1 (Sai). Đối với SHORT_ANSWER là một chuỗi văn bản (string) chính xác tuyệt đối.
+2. Với loại "TRUE FALSE", chỉ cần cung cấp đúng 2 options: [{"text": "Đúng", "link": "", "image": ""}, {"text": "Sai", "link": "", "image": ""}] và "correctAnswer" là 0 hoặc 1.
+3. Nghiêm cấm trả về bất kỳ văn bản giải thích phụ nào ở ngoài, không bọc JSON trong khối dấu nháy ngược \`\`\`json. Hãy trả về trực tiếp một mảng JSON hợp lệ chứa các câu hỏi dạng: [ ... ].`;
+
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-3.5-flash",
+          contents: prompt,
+          config: {
+            systemInstruction: systemPrompt,
+            responseMimeType: "application/json",
+          },
+        });
+
+        let text = response.text || "";
+        text = text.trim();
+        if (text.startsWith("```")) {
+          const firstNewline = text.indexOf("\n");
+          if (firstNewline !== -1) {
+            text = text.substring(firstNewline + 1);
+          } else {
+            text = text.substring(3);
+          }
+          if (text.endsWith("```")) {
+            text = text.substring(0, text.length - 3);
+          }
+          text = text.trim();
+        }
+        const parsed = JSON.parse(text);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        console.error(`Error generating ${type}:`, e);
+        return [];
+      }
+    };
+
+    // Parallel calls for outstanding volume and variety of types
+    const [singleQs, trueFalseQs, shortQs] = await Promise.all([
+      generateType('SINGLE', 'Trắc nghiệm một lựa chọn (SINGLE)', 60),
+      generateType('TRUE FALSE', 'Đúng / Sai (TRUE FALSE)', 60),
+      generateType('SHORT_ANSWER', 'Trả lời ngắn (SHORT_ANSWER)', 60)
+    ]);
+
+    const combined = [...singleQs, ...trueFalseQs, ...shortQs];
+
+    if (combined.length === 0) {
+      return res.status(500).json({ error: "Không thể trích xuất câu hỏi từ tài liệu đã cung cấp. Vui lòng kiểm tra lại nội dung tệp." });
+    }
+
+    res.json({ success: true, questions: combined });
+  } catch (err: any) {
+    console.error("Gemini Generate Multiple Questions Error:", err);
+    res.status(500).json({ error: err.message || "Lỗi tự động phân phối câu hỏi từ Gemini AI" });
+  }
+});
+
 app.post("/api/generate-question", async (req, res) => {
   try {
     const { prompt, grade } = req.body;

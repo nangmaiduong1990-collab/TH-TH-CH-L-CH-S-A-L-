@@ -3,7 +3,8 @@ import {
   Home, Trophy, Search, Sparkles, User, Trash, Check, CheckCircle2, 
   X, AlertCircle, FileText, Clock, Settings, Users, Plus, Download, 
   Upload, Volume2, ArrowRight, ArrowLeft, ShieldCheck, Award, 
-  Calendar, School, Mail, RefreshCw, Key, HelpCircle, CheckSquare, Lock
+  Calendar, School, Mail, RefreshCw, Key, HelpCircle, CheckSquare, Lock,
+  Pencil
 } from 'lucide-react';
 
 const INITIAL_QUESTIONS = [
@@ -372,6 +373,7 @@ export default function App() {
   const [quickImportText, setQuickImportText] = useState('');
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [examRecap, setExamRecap] = useState(null);
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
 
   const aiDocUploaderRef = useRef(null);
   const importQuestionsUploaderRef = useRef(null);
@@ -1227,6 +1229,191 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
     showToast(`📥 Đã tải xuống file thẻ phòng thi ${room.code}!`, 'success');
   };
 
+  const handleDownloadPdf = (targetQuestionsList?: any[], targetTitle?: string, gradeLabel?: string) => {
+    const list = targetQuestionsList || (activeExam ? activeExam.questionsList : questions) || [];
+    if (list.length === 0) {
+      showToast('Không có câu hỏi trắc nghiệm nào để tạo đề thi PDF!', 'warning');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      showToast('Vui lòng cho phép trình duyệt hiển thị popup để mở đề thi dạng PDF!', 'warning');
+      return;
+    }
+
+    const titleText = targetTitle || (activeExam ? activeExam.title : `Đề thi trắc nghiệm Lịch sử & Địa lí`) || 'Đề trắc nghiệm';
+    const gradeVal = gradeLabel || (activeExam ? activeExam.grade : (list[0]?.grade || '9'));
+    const roomCodeText = (activeExam && activeExam.code) || 'QUIZMASTER_K' + gradeVal;
+
+    let questionsHtml = '';
+    list.forEach((q, idx) => {
+      let optionsHtml = '';
+      if (q.type === 'TRUE FALSE') {
+        optionsHtml = `
+          <div class="options-grid">
+            <div class="option-item"><strong>A.</strong> ĐÚNG (Chính xác)</div>
+            <div class="option-item"><strong>B.</strong> SAI (Chưa chính xác)</div>
+          </div>
+        `;
+      } else {
+        const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+        const optsList = q.options || [];
+        optionsHtml = `
+          <div class="options-grid">
+            ${optsList.map((opt: any, oidx: number) => `
+              <div class="option-item">
+                <strong>${letters[oidx] || oidx + 1}.</strong> ${opt.text || opt || ''}
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      questionsHtml += `
+        <div class="question-block">
+          <div class="question-title">Câu ${idx + 1}: ${q.content}</div>
+          ${optionsHtml}
+        </div>
+      `;
+    });
+
+    const chunkAnswers = (arr: any[], size: number) => {
+      const chunks = [];
+      for (let i = 0; i < arr.length; i += size) {
+        chunks.push(arr.slice(i, i + size));
+      }
+      return chunks;
+    };
+
+    const answerItems = list.map((q, idx) => {
+      const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+      let ansText = '';
+      if (q.type === 'TRUE FALSE') {
+        ansText = q.correctAnswer === 0 ? 'Đúng' : 'Sai';
+      } else if (q.type === 'MULTIPLE') {
+        if (Array.isArray(q.correctAnswer)) {
+          ansText = q.correctAnswer.map((c: any) => letters[c] || c + 1).join(', ');
+        } else if (typeof q.correctAnswer === 'number') {
+          ansText = letters[q.correctAnswer] || q.correctAnswer + 1;
+        } else {
+          const scVal = q.correctAnswer !== undefined ? q.correctAnswer : q.correct_answer;
+          ansText = typeof scVal === 'number' ? (letters[scVal] || scVal + 1) : (scVal || 'A');
+        }
+      } else {
+        const scVal = q.correctAnswer !== undefined ? q.correctAnswer : q.correct_answer;
+        ansText = typeof scVal === 'number' ? (letters[scVal] || scVal + 1) : (scVal || 'A');
+      }
+      return { num: idx + 1, ans: ansText };
+    });
+
+    const chunks = chunkAnswers(answerItems, 10);
+    const tablesHtml = chunks.map(chunk => `
+      <table class="answer-table" style="margin-bottom: 12px; max-width: 600px;">
+        <thead>
+          <tr>
+            ${chunk.map(c => `<th style="border: 1px solid #0056b3; padding: 6px; font-weight: bold; background-color: #e6f0fa; color: #003366; min-width: 50px;">Câu ${c.num}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            ${chunk.map(c => `<td style="border: 1px solid #0056b3; padding: 6px; font-weight: bold; text-align: center;">${c.ans}</td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+    `).join('');
+
+    const docContent = `
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>DE_THI_TRAC_NGHIEM_K${gradeVal}</title>
+  <style>
+    @media print {
+      body { margin: 15mm 15mm 15mm 15mm; font-family: 'Times New Roman', Times, serif; color: #000; font-size: 13px; line-height: 1.5; }
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+    }
+    body { font-family: 'Times New Roman', Times, serif; color: #111; padding: 30px; max-width: 820px; margin: 0 auto; line-height: 1.5; }
+    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .header-table td { border: none; padding: 4px; vertical-align: top; }
+    .text-center { text-align: center; }
+    .font-bold { font-weight: bold; }
+    .uppercase { text-transform: uppercase; }
+    .title-main { font-size: 15px; font-weight: bold; text-align: center; text-transform: uppercase; margin-top: 15px; margin-bottom: 4px; color: #000; }
+    .title-sub { font-size: 12px; text-align: center; font-style: italic; margin-bottom: 20px; }
+    .student-info { border: 1px dashed #444; padding: 12px 18px; margin-bottom: 25px; font-size: 13px; display: flex; justify-content: space-between; font-style: italic; }
+    .question-block { margin-bottom: 16px; page-break-inside: avoid; }
+    .question-title { font-weight: bold; margin-bottom: 6px; }
+    .options-grid { display: grid; grid-template-cols: 1fr 1fr; gap: 8px; margin-left: 15px; margin-bottom: 10px; }
+    .option-item { font-size: 13px; }
+    .answer-table { width: 100%; border-collapse: collapse; margin-top: 5px; page-break-inside: avoid; }
+    .answer-table th, .answer-table td { border: 1px solid #0056b3; text-align: center; padding: 6px; font-size: 12px; }
+    .footer { text-align: center; font-style: italic; margin-top: 35px; font-size: 11px; color: #444; border-top: 1px solid #ddd; padding-top: 10px; }
+    .btn-print { background-color: #e11d48; color: white; padding: 12px 24px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; margin-bottom: 25px; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); font-family: system-ui, -apple-system, sans-serif; transition: all 0.2s; }
+    .btn-print:hover { background-color: #be123c; transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="text-align: right; margin-bottom: 20px;">
+    <button onclick="window.print()" class="btn-print">
+      🖨️ Tải Xuống PDF / In Đề Lập Tức
+    </button>
+  </div>
+
+  <table class="header-table">
+    <tr>
+      <td width="45%" class="text-center font-bold" style="font-size: 12px; line-height: 1.4;">
+        TRƯỜNG THCS BÌNH AN - CÔ DƯƠNG HIỆP<br>
+        <span style="font-weight: normal; font-size: 11px;">Mã kết nối đề: ${roomCodeText}</span>
+      </td>
+      <td width="55%" class="text-center font-bold" style="font-size: 12px; line-height: 1.4;">
+        KỲ THI KHẢO THÍ CHẤT LƯỢNG CAO LỚP ${gradeVal}<br>
+        MÔN: LỊCH SỬ & ĐỊA LÍ THCS KHỐI ${gradeVal}
+      </td>
+    </tr>
+  </table>
+
+  <h1 class="title-main">${titleText.toUpperCase()}</h1>
+  <p class="title-sub">Thời gian khảo thí: ${activeExam?.timeLeftOriginal ? Math.round(activeExam.timeLeftOriginal / 60) : 45} phút • Bản in bảo mật cho phép tải bởi học sinh</p>
+
+  <div class="student-info">
+    <div>Họ và tên thí sinh: ............................................................................</div>
+    <div>Lớp phòng: ..................................</div>
+  </div>
+
+  <div style="font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #000; padding-bottom: 5px; text-transform: uppercase;">Phần câu hỏi trắc nghiệm (${list.length} câu)</div>
+
+  ${questionsHtml}
+
+  <div class="page-break"></div>
+
+  <div style="font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid #0056b3; padding-bottom: 5px; text-transform: uppercase; color: #003366; margin-top: 20px;">HỆ THỐNG ĐÁP ÁN THAM KHẢO CHÍNH THỨC</div>
+  <p style="font-size: 12px; font-style: italic; margin-bottom: 12px; color: #555;">(Học sinh dùng để đối soát kết quả ôn thi sau khi rời phòng)</p>
+  
+  ${tablesHtml}
+
+  <div class="footer">
+    Hệ thống ôn luyện khảo thí Giáo dục THCS Bình An • Bản quyền đề thuộc Tổ Sử - Địa lí
+  </div>
+
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.print();
+      }, 250);
+    };
+  </script>
+</body>
+</html>
+    `;
+
+    printWindow.document.write(docContent);
+    printWindow.document.close();
+    showToast('📂 Đã kết xuất đề thi chất lượng cao thành công dạng PDF/Bản in!', 'success');
+  };
+
   // Submit and rank processing
   const submitExam = (examObj) => {
     let checkedCount = 0;
@@ -1576,6 +1763,95 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
     e.target.value = '';
   };
 
+  const handleImportQuestionsPdf = (e: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+      showToast('⚠️ Vui lòng tải lên tập tin có định dạng PDF (.pdf)!', 'warning');
+      return;
+    }
+
+    showToast('📄 Đang tải và trích xuất nội dung đề thi PDF bằng AI...', 'info');
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const result = event.target?.result as string;
+      if (!result) {
+        showToast('❌ Không thể nạp dữ liệu từ file PDF.', 'error');
+        return;
+      }
+
+      const base64Index = result.indexOf('base64,');
+      if (base64Index === -1) {
+        showToast('❌ Lỗi định dạng mã hóa tệp PDF.', 'error');
+        return;
+      }
+
+      const base64Data = result.substring(base64Index + 7);
+
+      try {
+        // Step 1: Parse PDF to text
+        const parseRes = await fetch('/api/parse-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdfBase64: base64Data, filename: file.name })
+        });
+
+        const parseData = await parseRes.json().catch(() => ({}));
+
+        if (!parseRes.ok || !parseData.success || !parseData.text) {
+          const errMsg = parseData.error || `Lỗi máy chủ (${parseRes.status})`;
+          showToast(`❌ Lỗi phân tích văn bản PDF: ${errMsg}`, 'error');
+          return;
+        }
+
+        showToast('🤖 Đang nhờ trợ lý AI tự động tạo ngân hàng câu hỏi trắc nghiệm từ PDF...', 'info');
+
+        // Step 2: Generate questions
+        const genRes = await fetch('/api/generate-multiple-questions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: parseData.text, grade: newQuestion.grade || '9' })
+        });
+
+        const genData = await genRes.json().catch(() => ({}));
+
+        if (genRes.ok && genData.success && Array.isArray(genData.questions)) {
+          const parsedList = genData.questions;
+          const importedMapped = parsedList.map((x: any, i: number) => ({
+            ...x,
+            id: `imported_pdf_${Date.now()}_${i}`,
+            grade: x.grade || newQuestion.grade || '9',
+            category: x.category || 'Lịch sử'
+          }));
+
+          const qMap = new Map(questions.map(q => [q.id, q]));
+          for (const item of importedMapped) {
+            qMap.set(item.id, item);
+          }
+          const next = Array.from(qMap.values());
+
+          saveQuestions(next, 'import', importedMapped);
+          showToast(`🎉 Đã tự động phân tách & nhập thành công ${importedMapped.length} câu hỏi mới từ tập tin PDF của bạn!`, 'success');
+        } else {
+          const errMsg = genData.error || `Lỗi máy chủ (${genRes.status})`;
+          showToast(`❌ AI lỗi tạo câu hỏi: ${errMsg}`, 'error');
+        }
+      } catch (err: any) {
+        console.error(err);
+        showToast(`❌ Lỗi kết nối AI: ${err.message || 'Không thể gửi tài liệu lên hệ thống'}`, 'error');
+      }
+    };
+
+    reader.onerror = () => {
+      showToast('❌ Không thể đọc file PDF.', 'error');
+    };
+
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const handleCreateRoom = (e) => {
     e.preventDefault();
     if (!createRoomForm.title.trim()) {
@@ -1643,6 +1919,292 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                 className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-lg transition-colors shadow-md shadow-indigo-100"
               >
                 Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Question/Document Modal */}
+      {editingQuestion && (
+        <div className="fixed inset-0 z-50 bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-2xl max-w-lg w-full p-6 space-y-4 animate-fadeIn my-8">
+            <div className="flex items-center justify-between border-b pb-3 border-slate-100">
+              <h3 className="font-extrabold text-slate-900 text-sm tracking-tight flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-indigo-600 animate-pulse" /> Sửa thông tin tài liệu & câu hỏi
+              </h3>
+              <button 
+                onClick={() => setEditingQuestion(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-50 transition-colors"
+                type="button"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3.5 text-xs max-h-[70vh] overflow-y-auto pr-1">
+              {/* Row 1: Grade & Category */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Khối Lớp</label>
+                  <select
+                    value={editingQuestion.grade || '9'}
+                    onChange={(e) => setEditingQuestion({ ...editingQuestion, grade: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="6">Lớp 6</option>
+                    <option value="7">Lớp 7</option>
+                    <option value="8">Lớp 8</option>
+                    <option value="9">Lớp 9</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Chuyên mục tài liệu</label>
+                  <select
+                    value={editingQuestion.category || 'Mặc định'}
+                    onChange={(e) => setEditingQuestion({ ...editingQuestion, category: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="Lịch sử">📚 Lịch sử</option>
+                    <option value="Địa lí">🌍 Địa lí</option>
+                    <option value="Chung">🔄 Chung</option>
+                    <option value="OT1">Khảo thí 1</option>
+                    <option value="OT2">Khảo thí 2</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 2: Question Type */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Loại câu hỏi</label>
+                  <select
+                    value={editingQuestion.type || 'SINGLE'}
+                    onChange={(e) => {
+                      const nextType = e.target.value;
+                      let nextOpts = [...(editingQuestion.options || [])];
+                      if (nextType === 'TRUE FALSE') {
+                        nextOpts = [
+                          { text: 'Đúng', link: '', image: '' },
+                          { text: 'Sai', link: '', image: '' }
+                        ];
+                      } else if (nextOpts.length === 2 && nextOpts[0].text === 'Đúng') {
+                        nextOpts = [
+                          { text: '', link: '', image: '' },
+                          { text: '', link: '', image: '' },
+                          { text: '', link: '', image: '' },
+                          { text: '', link: '', image: '' }
+                        ];
+                      }
+                      setEditingQuestion({ 
+                        ...editingQuestion, 
+                        type: nextType,
+                        options: nextOpts,
+                        correctAnswer: 0
+                      });
+                    }}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="SINGLE">Trắc nghiệm một lựa chọn</option>
+                    <option value="TRUE FALSE">Đúng / Sai</option>
+                    <option value="MULTIPLE">Nhiều lựa chọn (Hộp kiểm)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Mã STT hiển thị</label>
+                  <input
+                    type="number"
+                    value={editingQuestion.stt || ''}
+                    onChange={(e) => setEditingQuestion({ ...editingQuestion, stt: e.target.value ? parseInt(e.target.value) : '' })}
+                    placeholder="Tự động"
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              {/* Topic / Question statement content */}
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1 flex items-center justify-between">
+                  <span>Nội dung câu hỏi / tài liệu thô</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={editingQuestion.content || ''}
+                  onChange={(e) => setEditingQuestion({ ...editingQuestion, content: e.target.value })}
+                  placeholder="Nhập nội dung câu hỏi..."
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold leading-relaxed focus:outline-none focus:border-indigo-500"
+                ></textarea>
+              </div>
+
+              {/* Options lists and selection */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-[10px] font-black uppercase text-slate-500">Danh sách các câu trả lời & lựa chọn đúng</label>
+                  {editingQuestion.type !== 'TRUE FALSE' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextOpts = [...(editingQuestion.options || []), { text: '', link: '', image: '' }];
+                        setEditingQuestion({ ...editingQuestion, options: nextOpts });
+                      }}
+                      className="text-indigo-600 hover:text-indigo-800 font-extrabold text-[10px] uppercase tracking-wider"
+                    >
+                      + Thêm phương án
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {(editingQuestion.options || []).map((opt: any, oidx: number) => {
+                    const normalizedOptText = typeof opt === 'string' ? opt : (opt.text || '');
+                    const isCorrect = editingQuestion.type === 'MULTIPLE' 
+                      ? (Array.isArray(editingQuestion.correctAnswer) ? editingQuestion.correctAnswer.includes(oidx) : [editingQuestion.correctAnswer].includes(oidx))
+                      : editingQuestion.correctAnswer === oidx;
+
+                    return (
+                      <div key={oidx} className="flex items-center gap-2">
+                        <input
+                          type={editingQuestion.type === 'MULTIPLE' ? 'checkbox' : 'radio'}
+                          name="edit-question-correct-radio"
+                          checked={isCorrect}
+                          onChange={() => {
+                            if (editingQuestion.type === 'MULTIPLE') {
+                              const currentCorrects = Array.isArray(editingQuestion.correctAnswer)
+                                ? [...editingQuestion.correctAnswer]
+                                : [editingQuestion.correctAnswer];
+                              
+                              if (currentCorrects.includes(oidx)) {
+                                setEditingQuestion({
+                                  ...editingQuestion,
+                                  correctAnswer: currentCorrects.filter(c => c !== oidx)
+                                });
+                              } else {
+                                setEditingQuestion({
+                                  ...editingQuestion,
+                                  correctAnswer: [...currentCorrects, oidx]
+                                });
+                              }
+                            } else {
+                              setEditingQuestion({ ...editingQuestion, correctAnswer: oidx });
+                            }
+                          }}
+                          className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={normalizedOptText}
+                          disabled={editingQuestion.type === 'TRUE FALSE'}
+                          onChange={(e) => {
+                            const nextOpts = (editingQuestion.options || []).map((o: any, idx: number) => {
+                              if (idx === oidx) {
+                                if (typeof o === 'string') return { text: e.target.value, link: '', image: '' };
+                                return { ...o, text: e.target.value };
+                              }
+                              return o;
+                            });
+                            setEditingQuestion({ ...editingQuestion, options: nextOpts });
+                          }}
+                          className={`flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] font-semibold focus:outline-none focus:border-indigo-500 ${editingQuestion.type === 'TRUE FALSE' ? 'opacity-85 font-black bg-slate-100 text-slate-600' : ''}`}
+                          placeholder={`Lựa chọn ${oidx + 1}...`}
+                        />
+                        {editingQuestion.type !== 'TRUE FALSE' && (editingQuestion.options || []).length > 2 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextOpts = (editingQuestion.options || []).filter((_: any, idx: number) => idx !== oidx);
+                              // Safe correct index reset if deleted one was selected or index shifted
+                              let nextCorrect = editingQuestion.correctAnswer;
+                              if (editingQuestion.type === 'MULTIPLE') {
+                                const current = Array.isArray(editingQuestion.correctAnswer) ? editingQuestion.correctAnswer : [editingQuestion.correctAnswer];
+                                nextCorrect = current
+                                  .filter(c => c !== oidx)
+                                  .map(c => c > oidx ? c - 1 : c);
+                              } else {
+                                if (editingQuestion.correctAnswer === oidx) {
+                                  nextCorrect = 0;
+                                } else if (editingQuestion.correctAnswer > oidx) {
+                                  nextCorrect = editingQuestion.correctAnswer - 1;
+                                }
+                              }
+
+                              setEditingQuestion({
+                                ...editingQuestion,
+                                options: nextOpts,
+                                correctAnswer: nextCorrect
+                              });
+                            }}
+                            className="bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-105 p-2 rounded-lg transition-colors cursor-pointer"
+                            title="Xóa lựa chọn"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Explanation statement content */}
+              <div>
+                <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Lời giải thích cụ thể (Tùy chọn)</label>
+                <textarea
+                  rows={2}
+                  value={editingQuestion.explanation || ''}
+                  onChange={(e) => setEditingQuestion({ ...editingQuestion, explanation: e.target.value })}
+                  placeholder="Nhập phần giải thích hỗ trợ ôn bài..."
+                  className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 font-semibold focus:outline-none focus:border-indigo-500"
+                ></textarea>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+              <button 
+                type="button"
+                onClick={() => setEditingQuestion(null)}
+                className="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 font-bold text-xs rounded-lg transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                type="button"
+                onClick={async () => {
+                  if (!editingQuestion.content?.trim()) {
+                    showToast('⚠️ Nội dung câu hỏi không được trống!', 'warning');
+                    return;
+                  }
+                  // Normalize options text validation
+                  const cleanOpts = (editingQuestion.options || []).map((o: any) => {
+                    const textVal = typeof o === 'string' ? o : (o.text || '');
+                    return {
+                      text: textVal.trim() || 'Lựa chọn trống',
+                      link: o.link || '',
+                      image: o.image || ''
+                    };
+                  });
+                  const updatedQ = {
+                    ...editingQuestion,
+                    options: cleanOpts,
+                  };
+
+                  // 1. Map through state questions and update the matched ID question
+                  const updatedList = questions.map(q => {
+                    if (q.id === updatedQ.id) {
+                      return updatedQ;
+                    }
+                    return q;
+                  });
+                  
+                  // 2. Persist with saveQuestions
+                  await saveQuestions(updatedList, 'add', updatedQ);
+                  
+                  // 3. Close the modal
+                  setEditingQuestion(null);
+                  showToast('💾 Đã lưu thay đổi vào ngân hàng đề thành công!', 'success');
+                }}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-[11px] tracking-wide rounded-lg transition-colors shadow-md shadow-indigo-150 flex items-center gap-1.5"
+              >
+                <Check className="w-3.5 h-3.5" /> Lưu Thay Đổi
               </button>
             </div>
           </div>
@@ -2551,15 +3113,15 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                     type="file" 
                     id="import-questions-file-input"
                     ref={importQuestionsUploaderRef} 
-                    accept=".json" 
-                    onChange={handleImportQuestions} 
+                    accept=".pdf" 
+                    onChange={handleImportQuestionsPdf} 
                     className="hidden" 
                   />
                   <label 
                     htmlFor="import-questions-file-input"
                     className="cursor-pointer flex-1 sm:flex-none text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[11px] px-3.5 py-2 rounded-lg transition-colors uppercase tracking-wider flex items-center justify-center gap-1.5"
                   >
-                    <Upload className="w-3.5 h-3.5" /> Nạp đề JSON
+                    <FileText className="w-3.5 h-3.5 text-red-600 animate-pulse" /> Nhập file PDF
                   </label>
                   <button 
                     onClick={handleExportQuestions}
@@ -3073,26 +3635,83 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
 
               {activeAdminTab === 'questions' && (
                 <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
-                  <span className="block text-xs font-black text-slate-900 uppercase tracking-wider font-display">Danh mục câu hỏi hiện hoạt ({questions.length})</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-2 border-slate-100">
+                    <span className="block text-xs font-black text-slate-900 uppercase tracking-wider font-display">Danh mục câu hỏi hiện hoạt ({questions.length})</span>
+                    {questions.length > 0 && (
+                      <button
+                        onClick={() => handleDownloadPdf(questions, "Toàn Bộ Ngân Hàng Đề Trắc Nghiệm Chất Lượng Cao", "Tất Cả")}
+                        className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[9px] tracking-wider px-3 py-1.5 rounded-lg active:scale-95 transition-all shadow-md cursor-pointer shrink-0"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-white animate-pulse" /> Xuất Tất Cả Câu Hỏi (PDF)
+                      </button>
+                    )}
+                  </div>
                   <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                    {questions.map((q, qidx) => (
-                      <div key={q.id || qidx} className="bg-slate-50 border border-slate-100 p-4 rounded-xl text-xs flex flex-col sm:flex-row justify-between items-start gap-4">
-                        <div className="space-y-1.5 flex-1">
-                          <div className="flex gap-1">
-                            <span className="bg-indigo-100 text-indigo-700 font-black text-[9px] px-2 py-0.5 rounded">STT: {q.stt || qidx + 1}</span>
-                            <span className="bg-orange-100 text-orange-700 font-black text-[9px] px-2 py-0.5 rounded">Lớp {q.grade}</span>
-                            <span className="bg-slate-200 text-slate-700 font-black text-[9px] px-2 py-0.5 rounded">{q.type}</span>
+                    {questions.map((q, qidx) => {
+                      const correctIdx = typeof q.correctAnswer === 'number' ? q.correctAnswer : q.correct_answer;
+                      return (
+                        <div key={q.id || qidx} className="bg-slate-50 border border-slate-100 p-4 rounded-xl text-xs flex flex-col sm:flex-row justify-between items-start gap-4">
+                          <div className="space-y-1.5 flex-1 w-full">
+                            <div className="flex gap-1 flex-wrap">
+                              <span className="bg-indigo-150 text-indigo-800 font-black text-[9px] px-2 py-0.5 rounded">STT: {q.stt || qidx + 1}</span>
+                              <span className="bg-orange-100 text-orange-700 font-black text-[9px] px-2 py-0.5 rounded">Lớp {q.grade}</span>
+                              <span className="bg-slate-200 text-slate-700 font-black text-[9px] px-2 py-0.5 rounded">{q.type}</span>
+                              {q.category && (
+                                <span className="bg-teal-100 text-teal-800 font-black text-[9px] px-2 py-0.5 rounded">{q.category}</span>
+                              )}
+                            </div>
+                            <p className="font-extrabold text-slate-900 leading-snug">{q.content}</p>
+                            
+                            {/* Visual Options representation to let teachers inspect the loaded question correctly */}
+                            {q.options && q.options.length > 0 && (
+                              <div className="mt-2 text-slate-500 grid grid-cols-1 md:grid-cols-2 gap-1 text-[11px] border-t border-dashed border-slate-200 pt-2">
+                                {q.options.map((opt: any, oidx: number) => {
+                                  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+                                  const isCorrect = correctIdx === oidx;
+                                  return (
+                                    <div key={oidx} className={`flex items-start gap-1 p-1 rounded ${isCorrect ? 'bg-emerald-50 text-emerald-700 font-semibold border-l-2 border-emerald-500' : ''}`}>
+                                      <span>{letters[oidx] || oidx + 1}.</span>
+                                      <span>{opt.text || opt}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+                            {/* Show Explanation if available */}
+                            {q.explanation && (
+                              <p className="text-[10px] text-slate-500 italic mt-1.5 bg-slate-100 p-1.5 rounded border border-slate-200">
+                                💡 Giải thích: {q.explanation}
+                              </p>
+                            )}
                           </div>
-                          <p className="font-extrabold text-slate-900 leading-snug">{q.content}</p>
+                          
+                          <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0 border-t sm:border-t-0 pt-2 sm:pt-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingQuestion({ ...q })}
+                              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-750 font-black uppercase text-[9px] tracking-wide px-3 py-1.5 rounded-lg active:scale-95 transition-all text-center cursor-pointer shadow-sm"
+                            >
+                              <Pencil className="w-3.5 h-3.5" /> Sửa tài liệu
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadPdf([q], `Tài liệu ôn tập Lịch sử & Địa lí - Lớp ${q.grade}`, q.grade)}
+                              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-250 text-red-750 font-black uppercase text-[9px] tracking-wide px-3 py-1.5 rounded-lg active:scale-95 transition-all text-center cursor-pointer shadow-sm"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-red-600" /> Tải tài liệu
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => handleDeleteQuestion(q.id)}
+                              className="flex-1 sm:flex-none text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg font-black tracking-wider uppercase text-[9px] text-center border border-rose-100 active:scale-95 transition-all cursor-pointer"
+                            >
+                              Xóa bỏ
+                            </button>
+                          </div>
                         </div>
-                        <button 
-                          onClick={() => handleDeleteQuestion(q.id)}
-                          className="text-rose-600 hover:bg-rose-50 px-2.5 py-1 rounded font-black tracking-wider uppercase text-[10px] shrink-0 border border-rose-100"
-                        >
-                          Xóa bỏ
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -3227,9 +3846,18 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-relaxed">
-                    Câu hỏi {activeExam.currentIdx + 1}: {activeExam.questionsList[activeExam.currentIdx].content}
-                  </h3>
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-relaxed flex-1">
+                      Câu hỏi {activeExam.currentIdx + 1}: {activeExam.questionsList[activeExam.currentIdx].content}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPdf()}
+                      className="flex items-center gap-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-extrabold text-[11px] px-3 py-1.5 rounded-lg active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-red-600 animate-pulse" /> Tải đề PDF
+                    </button>
+                  </div>
 
                   {/* Question Type: TRUE FALSE */}
                   {activeExam.questionsList[activeExam.currentIdx].type === 'TRUE FALSE' ? (
