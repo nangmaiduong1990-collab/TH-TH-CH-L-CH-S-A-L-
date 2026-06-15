@@ -392,45 +392,174 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setSupabaseStatus(data);
+        return data;
       }
     } catch (err) {
       console.error("Lỗi kiểm lỗi Supabase:", err);
     }
+    return null;
   };
 
   const loadDatabaseData = async () => {
     try {
+      // 1. Get status first to make sure we know if Supabase is connected
+      const status = await checkSupabaseStatus();
+      const isConnected = status && status.connected;
+
+      // 2. Load Questions from server
       const qRes = await fetch('/api/questions');
+      let serverQuestions = [];
       if (qRes.ok) {
-        const qData = await qRes.json();
-        if (Array.isArray(qData) && qData.length > 0) {
-          setQuestions(qData);
+        serverQuestions = await qRes.json();
+      }
+
+      // Check client-side localStorage questions
+      const localQStr = localStorage.getItem('quizmaster_questions');
+      const localQList = localQStr ? JSON.parse(localQStr) : [];
+
+      if (isConnected) {
+        if (serverQuestions.length === 0 && localQList.length > 0) {
+          // AUTO-SYNC: Supabase is empty, but user has local storage questions! Upload them!
+          showToast(`🚀 Phát hiện ${localQList.length} câu hỏi lưu cục bộ. Đang tự động đẩy lên cơ sở dữ liệu Supabase...`, 'info');
+          const syncRes = await fetch('/api/questions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(localQList)
+          });
+          if (syncRes.ok) {
+            showToast(`🎉 Đã tự động đồng bộ thành công ${localQList.length} câu hỏi lên Supabase!`, 'success');
+            const qFreshRes = await fetch('/api/questions');
+            if (qFreshRes.ok) {
+              const freshData = await qFreshRes.json();
+              setQuestions(freshData);
+              localStorage.setItem('quizmaster_questions', JSON.stringify(freshData));
+            }
+          }
+        } else if (serverQuestions.length > 0) {
+          setQuestions(serverQuestions);
+          localStorage.setItem('quizmaster_questions', JSON.stringify(serverQuestions));
+        }
+      } else {
+        if (serverQuestions.length > 0) {
+          setQuestions(serverQuestions);
+        } else if (localQList.length > 0) {
+          setQuestions(localQList);
         }
       }
 
+      // 3. Load & Auto-sync Leaderboard
       const lRes = await fetch('/api/leaderboard');
+      let serverLeaderboard = [];
       if (lRes.ok) {
-        const lData = await lRes.json();
-        if (Array.isArray(lData)) {
-          setLeaderboard(lData);
+        serverLeaderboard = await lRes.json();
+      }
+
+      const localLStr = localStorage.getItem('quizmaster_leaderboard');
+      const localLeaderboard = localLStr ? JSON.parse(localLStr) : [];
+
+      if (isConnected) {
+        if (serverLeaderboard.length === 0 && localLeaderboard.length > 0) {
+          for (const entry of localLeaderboard) {
+            await fetch('/api/leaderboard', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(entry)
+            });
+          }
+          const freshLRes = await fetch('/api/leaderboard');
+          if (freshLRes.ok) {
+            const freshL = await freshLRes.json();
+            setLeaderboard(freshL);
+            localStorage.setItem('quizmaster_leaderboard', JSON.stringify(freshL));
+          }
+        } else {
+          setLeaderboard(serverLeaderboard);
+          localStorage.setItem('quizmaster_leaderboard', JSON.stringify(serverLeaderboard));
+        }
+      } else {
+        if (serverLeaderboard.length > 0) {
+          setLeaderboard(serverLeaderboard);
+        } else if (localLeaderboard.length > 0) {
+          setLeaderboard(localLeaderboard);
         }
       }
 
+      // 4. Load & Auto-sync Exam Rooms
       const rRes = await fetch('/api/exam-rooms');
+      let serverRooms = [];
       if (rRes.ok) {
-        const rData = await rRes.json();
-        if (Array.isArray(rData)) {
-          setExamRooms(rData);
+        serverRooms = await rRes.json();
+      }
+
+      const localRStr = localStorage.getItem('quizmaster_exam_rooms');
+      const localRooms = localRStr ? JSON.parse(localRStr) : [];
+
+      if (isConnected) {
+        if (serverRooms.length === 0 && localRooms.length > 0) {
+          for (const room of localRooms) {
+            await fetch('/api/exam-rooms', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(room)
+            });
+          }
+          const freshRRes = await fetch('/api/exam-rooms');
+          if (freshRRes.ok) {
+            const freshR = await freshRRes.json();
+            setExamRooms(freshR);
+            localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(freshR));
+          }
+        } else {
+          setExamRooms(serverRooms);
+          localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(serverRooms));
+        }
+      } else {
+        if (serverRooms.length > 0) {
+          setExamRooms(serverRooms);
+        } else if (localRooms.length > 0) {
+          setExamRooms(localRooms);
         }
       }
 
+      // 5. Load & Auto-sync Exam History Logs
       const hRes = await fetch('/api/exam-history-logs');
+      let serverLogs = [];
       if (hRes.ok) {
-        const hData = await hRes.json();
-        if (Array.isArray(hData)) {
-          setExamHistoryLogs(hData);
+        serverLogs = await hRes.json();
+      }
+
+      const localHStr = localStorage.getItem('quizmaster_history_logs');
+      const localLogs = localHStr ? JSON.parse(localHStr) : [];
+
+      if (isConnected) {
+        if (serverLogs.length === 0 && localLogs.length > 0) {
+          for (const log of localLogs) {
+            await fetch('/api/exam-history-logs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(log)
+            });
+          }
+          const freshHRes = await fetch('/api/exam-history-logs');
+          if (freshHRes.ok) {
+            const freshH = await freshHRes.json();
+            setExamHistoryLogs(freshH);
+            localStorage.setItem('quizmaster_history_logs', JSON.stringify(freshH));
+          }
+        } else {
+          setExamHistoryLogs(serverLogs);
+          localStorage.setItem('quizmaster_history_logs', JSON.stringify(serverLogs));
+        }
+      } else {
+        if (serverLogs.length > 0) {
+          setExamHistoryLogs(serverLogs);
+        } else if (localLogs.length > 0) {
+          setExamHistoryLogs(localLogs);
         }
       }
+
+      // Refresh connection counts
+      await checkSupabaseStatus();
     } catch (err) {
       console.error("Error loading database data:", err);
     }
@@ -439,7 +568,6 @@ export default function App() {
   // Load backend details on startup
   useEffect(() => {
     loadDatabaseData();
-    checkSupabaseStatus();
     loadSystemSettings();
   }, []);
 
@@ -2781,7 +2909,21 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                       </div>
                       <div>
                         <h2 className="text-base font-black text-slate-900 flex items-center gap-1.5 font-display uppercase">⚙️ Bảng Điều Khiển Quản Trị</h2>
-                        <p className="text-[10px] text-slate-400 font-extrabold uppercase mt-0.5">Xác thực: {adminProfile.name} • {adminProfile.role}</p>
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 mt-0.5">
+                          <p className="text-[10px] text-slate-400 font-extrabold uppercase">Xác thực: {adminProfile.name} • {adminProfile.role}</p>
+                          <span className="text-[10px] text-slate-350 font-bold">•</span>
+                          {supabaseStatus.connected ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-extrabold uppercase bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                              Cơ sở dữ liệu: Cloud ({supabaseStatus.host || 'supabase.co'})
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-zinc-500 font-extrabold uppercase bg-zinc-50 px-2 py-0.5 rounded-md border border-zinc-205">
+                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
+                              Lưu trữ cục bộ (Local Storage)
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -2805,8 +2947,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                   { id: 'overview', name: '📊 Tổng quan' },
                   { id: 'questions', name: '📚 Ngân hàng đề' },
                   { id: 'school_class', name: '🏫 Trường lớp' },
-                  { id: 'email_perms', name: '📧 Whitelist email' },
-                  { id: 'supabase', name: '⚡ Supabase Synced' }
+                  { id: 'email_perms', name: '📧 Whitelist email' }
                 ].map(tab => (
                   <button
                     key={tab.id}
@@ -2952,7 +3093,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
 
               {activeAdminTab === 'school_class' && (
                 <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4 animate-fadeIn">
-                  <h3 className="text-xs font-black uppercase text-slate-900">Mạng lưới trường THCS liên kết({schoolsList.length})</h3>
+                  <h3 className="text-xs font-black uppercase text-slate-900">Mạng lưới trường THCS liên kết ({schoolsList.length})</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
                       <span className="block text-[11px] font-black text-slate-500 uppercase">Whitelist trường học mới</span>
@@ -3025,7 +3166,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                       </button>
                     </div>
 
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                    <div className="bg-white border border-slate-200 p-3 rounded-xl divide-y divide-slate-100 max-h-60 overflow-y-auto w-full">
                       {emailWhitelist.map(email => (
                         <div key={email} className="py-2 flex items-center justify-between text-xs font-bold text-slate-700">
                           <span>📧 {email}</span>
@@ -3043,129 +3184,6 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                       ))}
                     </div>
                   </div>
-                </div>
-              )}
-
-              {activeAdminTab === 'supabase' && (
-                <div className="space-y-6 animate-fadeIn">
-                  {/* Connection Header Box */}
-                  <div className={`p-6 rounded-2xl border ${supabaseStatus.connected ? 'bg-gradient-to-br from-emerald-50 to-teal-50/30 border-emerald-200' : 'bg-gradient-to-br from-zinc-50 to-slate-50 border-zinc-200'} shadow-sm`}>
-                    <div className="space-y-4">
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="relative flex h-3 w-3">
-                              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${supabaseStatus.connected ? 'bg-emerald-400' : 'bg-zinc-400'}`}></span>
-                              <span className={`relative inline-flex rounded-full h-3 w-3 ${supabaseStatus.connected ? 'bg-emerald-500' : 'bg-zinc-500'}`}></span>
-                            </span>
-                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Trạng Thái Kết Nối</span>
-                          </div>
-                          
-                          <h3 className="font-sans font-black text-slate-900 tracking-tight text-xl uppercase leading-tight">
-                            {supabaseStatus.connected ? 'Đã liên kết cơ sở dữ liệu cloud' : 'Chế độ lưu trữ tạm thời (Local Fallback)'}
-                          </h3>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <button 
-                            onClick={async () => {
-                              showToast('Đang kiểm tra kết nối...', 'info');
-                              await checkSupabaseStatus();
-                              await loadDatabaseData();
-                              showToast('Đã quét cập nhật trạng thái mới nhất!', 'success');
-                            }}
-                            className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5"
-                          >
-                            🔄 Quét lại liên kết
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Display what Supabase is connected to */}
-                      <div className="bg-white p-4 rounded-xl border border-slate-150/85 space-y-3 shadow-inner">
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-                          <span className="text-xs font-bold text-slate-500">Mã nguồn kết nối (Supabase Host):</span>
-                          {supabaseStatus.connected ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-55/30 text-emerald-800 text-xs font-mono font-black border border-emerald-100 rounded-lg">
-                              ⚡ {supabaseStatus.host || 'supabase.co'}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-55/30 text-amber-800 text-xs font-mono font-black border border-amber-100 rounded-lg">
-                              ⚠️ local_db.json (Offline)
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="text-xs text-slate-600 font-semibold leading-relaxed">
-                          {supabaseStatus.connected ? (
-                            <p>
-                              🎉 <strong>Hệ thống đang hoạt động ở chế độ ĐỒNG BỘ CLOUD VĨNH VIỄN!</strong> Mọi dữ liệu (Ngân hàng đề câu hỏi, phòng thi, câu hỏi được tạo tự động bởi AI, lịch sử thi cử, bảng xếp hạng của học sinh) đều được <strong>tự động lưu trữ và đẩy trực tiếp lên Cloud</strong> theo thời gian thực mà không yêu cầu bạn thực hiện thao tác thủ công nào.
-                            </p>
-                          ) : (
-                            <p>
-                              ⚠️ Ứng dụng hiện đang bản sao lưu trữ trực tiếp vào tệp lưu cục bộ của máy chủ (local storage). Để dữ liệu không bị khôi phục đặt lại trên nền tảng Vercel, hãy thiết lập biến môi trường <code>SUPABASE_URL</code> và <code>SUPABASE_ANON_KEY</code>.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Schema Summary Metrics */}
-                  <div className="space-y-2.5">
-                    <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Số lượng bản ghi đồng bộ thực tế</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {[
-                        { title: 'Ngân hàng đề', key: 'questions', icon: '📚', desc: 'Bộ câu hỏi thi đấu' },
-                        { title: 'Bảng xếp hạng', key: 'leaderboard', icon: '🏆', desc: 'Thành tích vinh danh' },
-                        { title: 'Phòng thi đấu', key: 'examRooms', icon: '🏟️', desc: 'Mã phòng trực tiếp' },
-                        { title: 'Nhật ký thi đấu', key: 'examHistoryLogs', icon: '📜', desc: 'Lịch sử học trình' }
-                      ].map(metric => (
-                        <div key={metric.key} className="bg-white p-4 rounded-xl border border-slate-150 shadow-sm text-center space-y-1.5">
-                          <div className="text-2xl">{metric.icon}</div>
-                          <span className="block text-[9px] text-slate-400 font-extrabold uppercase tracking-widest">{metric.title}</span>
-                          <span className="block text-2xl font-black text-indigo-700">
-                            {supabaseStatus.counts[metric.key as keyof typeof supabaseStatus.counts] !== undefined ? supabaseStatus.counts[metric.key as keyof typeof supabaseStatus.counts] : 0}
-                          </span>
-                          <span className="block text-[10px] text-slate-400 font-semibold">{metric.desc}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tiny collapsible SQL reference container */}
-                  <details className="group border border-slate-250/70 rounded-xl bg-white overflow-hidden shadow-sm">
-                    <summary className="flex items-center justify-between p-4 cursor-pointer select-none text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                      <span>🛠️ Hiển thị cấu trúc cơ sở dữ liệu SQL (Nếu muốn chạy lại trên Supabase SQL Editor)</span>
-                      <span className="transition-transform group-open:rotate-180 text-xs">▼</span>
-                    </summary>
-                    <div className="p-4 border-t border-slate-150 bg-slate-50 space-y-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[10px] text-slate-500 font-semibold">Sao chép mã SQL để khởi tạo bảng nếu bạn kết nối kết cấu Supabase mới tinh.</p>
-                        <button 
-                          onClick={() => {
-                            try {
-                              const sqlArea = document.createElement('textarea');
-                              sqlArea.value = supabaseStatus.sql || '';
-                              document.body.appendChild(sqlArea);
-                              sqlArea.select();
-                              document.execCommand('copy');
-                              document.body.removeChild(sqlArea);
-                              showToast('📋 Đã sao chép mã lệnh SQL thành công!', 'success');
-                            } catch {
-                              showToast('Lỗi sao chép tự động.', 'error');
-                            }
-                          }}
-                          className="bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-[10px] px-3 py-1.5 rounded-lg uppercase transition-colors shrink-0"
-                        >
-                          📋 Sao chép mã SQL
-                        </button>
-                      </div>
-                      <pre className="p-4 bg-slate-950 text-emerald-400 font-mono text-[9px] rounded-lg overflow-x-auto max-h-52 border border-slate-900 scrollbar-thin select-all">
-                        <code>{supabaseStatus.sql}</code>
-                      </pre>
-                    </div>
-                  </details>
                 </div>
               )}
                 </>
