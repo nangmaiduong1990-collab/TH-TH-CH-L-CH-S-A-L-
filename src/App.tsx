@@ -3130,27 +3130,58 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                     <p className="text-xs text-slate-500 font-medium">
                       Nếu hệ quản trị cơ sở dữ liệu Supabase của bạn đang trống không hoặc chưa có câu hỏi nào hoạt động, hãy nhấp vào nút dưới đây để kích hoạt nạp bộ câu hỏi Lịch sử - Địa lí lớp 6, 7, 8, 9 mặc định cùng lịch sử thi đua thử nghiệm. Dữ liệu sẽ được lưu trực tiếp vào Supabase và đồng bộ về máy chủ.
                     </p>
-                    <button 
-                      onClick={async () => {
-                        try {
-                          showToast('Đang châm nguồn dữ liệu mầm vào cơ sở dữ liệu...', 'info');
-                          const res = await fetch('/api/supabase/seed', { method: 'POST' });
-                          const data = await res.json();
-                          if (res.ok) {
-                            showToast('🌱 Đã gieo mầm dữ liệu thành công!', 'success');
-                            checkSupabaseStatus();
-                            loadDatabaseData();
-                          } else {
-                            showToast(`Thao tác không hoàn tất: ${data.message}`, 'error');
+                    <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            showToast('Đang châm nguồn dữ liệu mầm vào cơ sở dữ liệu...', 'info');
+                            const res = await fetch('/api/supabase/seed', { method: 'POST' });
+                            const data = await res.json();
+                            if (res.ok) {
+                              showToast('🌱 Đã gieo mầm dữ liệu thành công!', 'success');
+                              checkSupabaseStatus();
+                              loadDatabaseData();
+                            } else {
+                              showToast(`Thao tác không hoàn tất: ${data.message}`, 'error');
+                            }
+                          } catch (err) {
+                            showToast('Không thể kết nối máy chủ gieo mầm.', 'error');
                           }
-                        } catch (err) {
-                          showToast('Không thể kết nối máy chủ gieo mầm.', 'error');
-                        }
-                      }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-lg transition-colors shadow-sm"
-                    >
-                      🌱 Khởi tạo dữ liệu gieo mầm mặc định (Seed DB)
-                    </button>
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-lg transition-colors shadow-sm cursor-pointer select-none"
+                      >
+                        🌱 Khởi tạo dữ liệu gieo mầm mặc định (Seed DB)
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          try {
+                            if (!questions || questions.length === 0) {
+                              showToast('Không có câu hỏi nào hiện tại để đồng bộ!', 'warning');
+                              return;
+                            }
+                            showToast(`Đang đẩy ${questions.length} câu hỏi hiện tại lên Supabase...`, 'info');
+                            const res = await fetch('/api/questions', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify(questions)
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            if (res.ok && data.success) {
+                              showToast(`📤 Đã đồng bộ thành công ${questions.length} câu hỏi hiện tại lên Supabase!`, 'success');
+                              checkSupabaseStatus();
+                            } else {
+                              showToast(`❌ Lỗi đồng bộ: ${data.error || 'Yêu cầu thất bại'}`, 'error');
+                            }
+                          } catch (err: any) {
+                            showToast(`❌ Lỗi kết nối: ${err.message || 'Không thể liên lạc máy chủ'}`, 'error');
+                          }
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg transition-colors shadow-sm cursor-pointer select-none"
+                      >
+                        📤 Đẩy toàn bộ đề thi hiện tại lên Supabase
+                      </button>
+                    </div>
                   </div>
 
                   {/* SQL scripts for manual creation */}
