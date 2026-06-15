@@ -181,9 +181,9 @@ function mapLeaderboardToSupabase(l: any) {
     id: convertToUUID(l.id),
     name: l.name,
     class: l.class,
-    score: l.score,
-    time_spent: l.time || '0:00',
-    exam_date: l.date || ''
+    score: typeof l.score === 'number' ? l.score : 0,
+    time: l.time || '0:00',
+    date: l.date || ''
   };
 }
 
@@ -193,8 +193,8 @@ function mapLeaderboardFromSupabase(dbL: any) {
     name: dbL.name,
     class: dbL.class,
     score: dbL.score,
-    time: dbL.time_spent,
-    date: dbL.exam_date
+    time: dbL.time,
+    date: dbL.date
   };
 }
 
@@ -205,7 +205,8 @@ function mapExamRoomToSupabase(r: any) {
     title: r.title,
     grade: r.grade,
     duration: typeof r.duration === 'number' ? r.duration : 45,
-    questions_count: typeof r.questions === 'number' ? r.questions : 15,
+    questions: typeof r.questions === 'number' ? r.questions : 15,
+    studentsCount: typeof r.studentsCount === 'number' ? r.studentsCount : 0,
     status: r.status || 'ĐANG CHỜ'
   };
 }
@@ -217,7 +218,8 @@ function mapExamRoomFromSupabase(dbR: any) {
     title: dbR.title,
     grade: dbR.grade,
     duration: dbR.duration,
-    questions: dbR.questions_count,
+    questions: dbR.questions,
+    studentsCount: dbR.studentsCount || 0,
     status: dbR.status
   };
 }
@@ -229,7 +231,7 @@ function mapHistoryLogToSupabase(h: any) {
     grade: h.grade,
     score: h.score,
     duration: h.duration,
-    exam_date: h.date || ''
+    date: h.date || ''
   };
 }
 
@@ -240,7 +242,7 @@ function mapHistoryLogFromSupabase(dbH: any) {
     grade: dbH.grade,
     score: dbH.score,
     duration: dbH.duration,
-    date: dbH.exam_date
+    date: dbH.date
   };
 }
 
