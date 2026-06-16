@@ -746,7 +746,7 @@ app.post("/api/exam-history-logs", async (req, res) => {
 // API ROUTES FOR GEMINI
 app.post("/api/generate-multiple-questions", async (req, res) => {
   try {
-    const { prompt, grade } = req.body;
+    const { prompt, grade, subject } = req.body;
     if (!prompt) {
       return res.status(400).json({ error: "Nội dung tài liệu thô để sinh câu hỏi trống!" });
     }
@@ -757,11 +757,11 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
       });
     }
 
-    // We will generate three types: SINGLE (Trắc nghiệm), TRUE FALSE, SHORT_ANSWER.
+    // We will generate four types: SINGLE (Một đáp án), MULTIPLE (Nhiều đáp án), TRUE FALSE, SHORT_ANSWER.
     // To get as close to 60 questions each as possible, we do parallel calls.
     // Each call asks for up to 60 detailed, unique, high-quality questions on every detail of the document text.
     
-    const generateType = async (type: 'SINGLE' | 'TRUE FALSE' | 'SHORT_ANSWER', typeName: string, num: number) => {
+    const generateType = async (type: 'SINGLE' | 'MULTIPLE' | 'TRUE FALSE' | 'SHORT_ANSWER', typeName: string, num: number) => {
       let formatSchema = "";
       if (type === 'SINGLE') {
         formatSchema = `{
@@ -777,6 +777,21 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
   ],
   "correctAnswer": 0,
   "explanation": "Giải thích tại sao phương án được chọn là đúng nhằm mục đích học tập."
+}`;
+      } else if (type === 'MULTIPLE') {
+        formatSchema = `{
+  "content": "Nội dung câu hỏi trắc nghiệm có từ 2 hay nhiều hơn 2 lựa chọn đúng đồng thời để rèn luyện kỹ năng tốt",
+  "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
+  "type": "MULTIPLE",
+  "grade": "6" hoặc "7" hoặc "8" hoặc "9",
+  "options": [
+    { "text": "Phương án đúng thứ nhất", "link": "", "image": "" },
+    { "text": "Phương án sai", "link": "", "image": "" },
+    { "text": "Phương án đúng thứ hai", "link": "", "image": "" },
+    { "text": "Phương án sai khác", "link": "", "image": "" }
+  ],
+  "correctAnswer": [0, 2], // Mảng chứa các index số nguyên của các đáp án đúng của câu hỏi này (ví dụ: [0, 2], [0, 1, 3]...)
+  "explanation": "Giải thích chi tiết tại sao các phương án được lựa chọn này là chính xác hoàn toàn."
 }`;
       } else if (type === 'TRUE FALSE') {
         formatSchema = `{
@@ -803,16 +818,22 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
 }`;
       }
 
+      const targetGradeDesc = grade ? `Dành riêng cho Khối lớp: "${grade}". Hãy gán thuộc tính "grade" là "${grade}" cho mọi câu hỏi.` : 'Phân bổ đều cho các khối lớp THCS: "6", "7", "8", và "9"';
+      const targetSubjectDesc = (subject && subject !== 'Tự động') ? `Dành riêng cho phân môn hoặc lĩnh vực kiến thức: "${subject}". Hãy gán thuộc tính "category" của mọi câu hỏi được sinh ra là "${subject}".` : 'Hãy tự động đánh giá phân biệt nội dung để gán "category" là "Lịch sử" hoặc "Địa lí" phù hợp nhất.';
+
       const systemPrompt = `Bạn là một chuyên gia khảo thí thiết kế đề thi môn Lịch sử và Địa lí xuất sắc cấp THCS.
 Nhiệm vụ: Hãy nghiên cứu kỹ văn bản tài liệu học tập được cung cấp, sau đó soạn thảo và sinh ra danh sách tối đa ${num} câu hỏi thuộc loại [${typeName}] cực kỳ chất lượng, bám sát từng sự kiện, địa danh, mốc thời gian, số liệu có trong văn bản.
-Khai thác triệt để và phân bổ đều khối lớp: Hãy tạo ra số lượng câu hỏi nhiều nhất có thể (lý tưởng tốt nhất là phân bổ đều cho các khối lớp THCS: "6", "7", "8", và "9", mỗi khối lớp khoảng 15 câu độc lập, không trùng lặp, để tổng đạt mốc tối đa ${num} câu hỏi của loại này). Hãy gán thuộc tính "grade" là một trong bốn giá trị chuỗi: "6", "7", "8", hoặc "9" tương ứng với khối lớp phù hợp với nội dung bài học đó.
+Khai thác triệt để: Hãy tạo ra số lượng câu hỏi nhiều nhất có thể (lên tới tối đa ${num} câu hỏi độc lập, không trùng lặp đối với loại câu hỏi này).
+Điểm nhấn mục tiêu khối học và phân môn:
+1. ${targetGradeDesc}
+2. ${targetSubjectDesc}
 
 Cấu trúc từng câu hỏi trong mảng JSON phải đúng 100% định dạng schema sau:
 ${formatSchema}
 
 * Lưu ý đặc biệt:
-1. "grade" BẮT BUỘC chỉ được chọn một trong bốn giá trị: "6", "7", "8", "9". Hãy phân bổ số lượng tương đương nhau cho mỗi khối lớp (khoảng 15 câu/khối lớp).
-2. "correctAnswer" đối với loại SINGLE là index số nguyên của mảng options (bắt đầu từ 0). Đối với TRUE FALSE là 0 (Đúng) hoặc 1 (Sai). Đối với SHORT_ANSWER là một chuỗi văn bản (string) chính xác tuyệt đối.
+1. Khối lớp "grade" BẮT BUỘC chỉ được chọn một trong bốn giá trị chuỗi: "6", "7", "8", "9".${grade ? ` Ở câu hỏi này, bắt buộc gán cứng là "${grade}".` : ''}
+2. "correctAnswer" đối với loại SINGLE là index số nguyên của mảng options (bắt đầu từ 0). Đối với MULTIPLE là một MẢNG các chỉ số nguyên (ví dụ: [0, 2] hoặc [1, 2, 3]). Đối với TRUE FALSE là 0 (Đúng) hoặc 1 (Sai). Đối với SHORT_ANSWER là một chuỗi văn bản (string) chính xác tuyệt đối.
 3. Với loại "TRUE FALSE", chỉ cần cung cấp đúng 2 options: [{"text": "Đúng", "link": "", "image": ""}, {"text": "Sai", "link": "", "image": ""}] và "correctAnswer" là 0 hoặc 1.
 4. Nghiêm cấm trả về bất kỳ văn bản giải thích phụ nào ở ngoài, không bọc JSON trong khối dấu nháy ngược \`\`\`json. Hãy trả về trực tiếp một mảng JSON hợp lệ chứa các câu hỏi dạng: [ ... ].`;
 
@@ -849,13 +870,14 @@ ${formatSchema}
     };
 
     // Parallel calls for outstanding volume and variety of types
-    const [singleQs, trueFalseQs, shortQs] = await Promise.all([
+    const [singleQs, multipleQs, trueFalseQs, shortQs] = await Promise.all([
       generateType('SINGLE', 'Trắc nghiệm một lựa chọn (SINGLE)', 60),
+      generateType('MULTIPLE', 'Trắc nghiệm nhiều lựa chọn (MULTIPLE)', 60),
       generateType('TRUE FALSE', 'Đúng / Sai (TRUE FALSE)', 60),
       generateType('SHORT_ANSWER', 'Trả lời ngắn (SHORT_ANSWER)', 60)
     ]);
 
-    const combined = [...singleQs, ...trueFalseQs, ...shortQs];
+    const combined = [...singleQs, ...multipleQs, ...trueFalseQs, ...shortQs];
 
     if (combined.length === 0) {
       return res.status(500).json({ error: "Không thể trích xuất câu hỏi từ tài liệu đã cung cấp. Vui lòng kiểm tra lại nội dung tệp." });
@@ -943,29 +965,62 @@ app.post("/api/parse-pdf", async (req, res) => {
       });
     }
 
+    // Safely sanitize the base64 content
+    let base64Clean = pdfBase64;
+    if (typeof base64Clean === "string" && base64Clean.includes("base64,")) {
+      base64Clean = base64Clean.split("base64,")[1];
+    }
+    base64Clean = base64Clean.trim();
+
     const pdfPart = {
       inlineData: {
-        data: pdfBase64,
+        data: base64Clean,
         mimeType: "application/pdf"
       }
     };
 
-    const userPrompt = "Hãy phân tích tệp tài liệu PDF này và trích xuất lại toàn bộ văn bản/nội dung kiến thức thô dạng chữ (plain text) bên trong một cách đầy đủ, chính xác từng từ bằng Tiếng Việt. Giữ nguyên cấu trúc thông tin quan trọng. Nghiêm cấm tóm tắt, nghiêm cấm viết quá ngắn gọn, hãy trích xuất toàn bộ dữ liệu chi tiết nhất có thể để phục vụ việc soạn đề thi trắc nghiệm học thuật.";
+    const userPrompt = "Hãy phân tích tệp tài liệu PDF này và trích xuất lại toàn bộ văn bản/nội dung kiến thức thô dạng chữ (plain text) bên trong một cách đầy đủ, chính xác từng từ bằng Tiếng Việt. Giữ nguyên cấu trúc thông tin quan trọng. Nghiêm cấm tóm tắt, nghiêm cấm viết quá ngắn gọn, hãy trích xuất toàn bộ dữ liệu chi tiết nhất có thể để phục vụ việc soạn đề thi trắc nghiệm học thuật. Nếu tài liệu chứa hình ảnh hoặc bản quét, hãy tự động nhận diện ký tự quang học (OCR) để trích xuất đầy đủ văn bản tiếng Việt bám sát thực tế nhất.";
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: {
-        parts: [
-          pdfPart,
-          { text: userPrompt }
-        ]
+    let response;
+    let lastError = null;
+    const modelsToTry = [
+      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-flash-latest"
+    ];
+
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`[PDF SDK] Attempting PDF parse with model: ${modelName}`);
+        const attemptResponse = await ai.models.generateContent({
+          model: modelName,
+          contents: {
+            parts: [
+              pdfPart,
+              { text: userPrompt }
+            ]
+          }
+        });
+        if (attemptResponse && attemptResponse.text) {
+          response = attemptResponse;
+          console.log(`[PDF SDK] Successfully extracted text with model: ${modelName}`);
+          break;
+        }
+      } catch (err: any) {
+        console.error(`[PDF SDK] Error trying model ${modelName}:`, err.message || err);
+        lastError = err;
       }
-    });
+    }
+
+    if (!response || !response.text) {
+      const errorMsg = lastError?.message || "Không thể nạp nội dung tài liệu PDF từ các mô hình Gemini. Hãy chắc chắn tập tin PDF của bạn không bị khóa mật khẩu và chứa chữ đọc được.";
+      return res.status(500).json({ error: errorMsg });
+    }
 
     res.json({ success: true, text: response.text });
   } catch (err: any) {
     console.error("Gemini PDF Parse Error:", err);
-    res.status(500).json({ error: err.message || "Lỗi khi trích xuất tài liệu từ Gemini" });
+    res.status(500).json({ error: err.message || "Lỗi nghiêm trọng khi trích xuất tài liệu từ hệ thống" });
   }
 });
 

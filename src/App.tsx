@@ -221,7 +221,40 @@ export default function App() {
 
   const [activeAdminTab, setActiveAdminTab] = useState('overview'); // overview, questions, school_class, email_perms, cloudflare, history
   const [adminQuestionGradeFilter, setAdminQuestionGradeFilter] = useState<'Tất cả' | '6' | '7' | '8' | '9'>('Tất cả');
+  const [adminQuestionSubjectFilter, setAdminQuestionSubjectFilter] = useState<'Tất cả' | 'Lịch sử' | 'Địa lí'>('Tất cả');
   const [importTargetGrade, setImportTargetGrade] = useState<'6' | '7' | '8' | '9'>('9');
+  const [importTargetSubject, setImportTargetSubject] = useState<'Tự động' | 'Lịch sử' | 'Địa lí'>('Tự động');
+
+  const getNormalizedSubject = (q: any): 'Lịch sử' | 'Địa lí' => {
+    const cat = q.category || '';
+    const c = cat.toLowerCase().trim();
+    if (c === 'lịch sử' || c === 'lich su') return 'Lịch sử';
+    if (c === 'địa lí' || c === 'dia li' || c === 'địa lý' || c === 'dia ly') return 'Địa lí';
+    
+    // Heuristic analysis of question content
+    const content = (q.content || '').toLowerCase();
+    const historyKeywords = [
+      'chiến dịch', 'lịch sử', 'năm 19', 'hiệp định', 'kháng chiến', 'vua', 'triều đại', 
+      'thế kỷ', 'tuyên ngôn', 'bác hồ', 'đại tướng', 'chiến tranh', 'độc lập', 'nhà nguyễn', 
+      'phong kiến', 'đặng', 'cách mạng', 'ký kết', 'thực dân', 'phát xít', 'đế quốc', 'khởi nghĩa',
+      'anh hùng', 'nhà lê', 'nhà trần', 'nhà lý', 'bản đồ lịch sử', 'tổ quốc', 'giải phóng', 'quân sự'
+    ];
+    const geoKeywords = [
+      'trái đất', 'địa lí', 'bản đồ', 'biền', 'biển', 'núi', 'sông', 'vĩ độ', 'kinh độ', 'khí hậu', 
+      'mưa', 'gió', 'dân số', 'vùng', 'tự nhiên', 'địa lý', 'đại dương', 'bán đảo', 'khu vực', 
+      'kinh tế', 'tài nguyên', 'khoáng sản', 'địa thế', 'địa hình', 'đường xích đạo', 'nhiệt đới', 
+      'ôn đới', 'hoang mạc', 'núi lửa', 'động đất', 'thổ nhưỡng', 'sông ngòi', 'đồng bằng', 'đỉnh núi'
+    ];
+    
+    for (const kw of historyKeywords) {
+      if (content.includes(kw)) return 'Lịch sử';
+    }
+    for (const kw of geoKeywords) {
+      if (content.includes(kw)) return 'Địa lí';
+    }
+    return 'Lịch sử'; // default fallback
+  };
+
   const [leaderboardGradeFilter, setLeaderboardGradeFilter] = useState('Tất cả'); 
   const [leaderboardClassroomFilter, setLeaderboardClassroomFilter] = useState('Tất cả lớp');
   const [leaderboardSearchQuery, setLeaderboardSearchQuery] = useState('');
@@ -358,7 +391,7 @@ export default function App() {
   const [newQuestion, setNewQuestion] = useState({
     content: '',
     grade: '6',
-    category: 'OT1',
+    category: 'Lịch sử',
     stt: '',
     type: 'SINGLE',
     options: [
@@ -1632,7 +1665,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
     setNewQuestion({
       content: '',
       grade: '6',
-      category: 'OT1',
+      category: 'Lịch sử',
       stt: '',
       type: 'SINGLE',
       options: [
@@ -1814,19 +1847,31 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
         const genRes = await fetch('/api/generate-multiple-questions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: parseData.text, grade: importTargetGrade })
+          body: JSON.stringify({ 
+            prompt: parseData.text, 
+            grade: importTargetGrade,
+            subject: importTargetSubject
+          })
         });
 
         const genData = await genRes.json().catch(() => ({}));
 
         if (genRes.ok && genData.success && Array.isArray(genData.questions)) {
           const parsedList = genData.questions;
-          const importedMapped = parsedList.map((x: any, i: number) => ({
-            ...x,
-            id: `imported_pdf_${Date.now()}_${i}`,
-            grade: importTargetGrade,
-            category: x.category || 'Lịch sử'
-          }));
+          const importedMapped = parsedList.map((x: any, i: number) => {
+            let cat = x.category || 'Lịch sử';
+            if (importTargetSubject !== 'Tự động') {
+              cat = importTargetSubject;
+            } else {
+              cat = getNormalizedSubject(x);
+            }
+            return {
+              ...x,
+              id: `imported_pdf_${Date.now()}_${i}`,
+              grade: importTargetGrade,
+              category: cat
+            };
+          });
 
           const qMap = new Map(questions.map(q => [q.id, q]));
           for (const item of importedMapped) {
@@ -3156,6 +3201,32 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                     ))}
                   </div>
                 </div>
+
+                <div className="bg-sky-50/50 border border-sky-200/60 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="text-left space-y-0.5">
+                    <span className="block font-black text-slate-800 text-[11px] uppercase tracking-wide">📚 MÔN HỌC ĐÍNH KÈM CHO ĐỀ NHẬP</span>
+                    <span className="block text-[10px] text-slate-500 font-semibold">Phân phối dữ liệu vào Lịch sử hay Địa lí khi nhập đề PDF</span>
+                  </div>
+                  <div className="flex gap-1 justify-center sm:justify-start">
+                    {[
+                      { key: 'Tự động', label: '🤖 Tự động' },
+                      { key: 'Lịch sử', label: '📚 Lịch sử' },
+                      { key: 'Địa lí', label: '🌍 Địa lí' }
+                    ].map(sub => (
+                      <button
+                        type="button"
+                        key={sub.key}
+                        onClick={() => {
+                          setImportTargetSubject(sub.key as any);
+                          showToast(`📚 Đã chọn chế độ phân phối môn: ${sub.label}`, 'info');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${importTargetSubject === sub.key ? 'bg-blue-600 border-blue-500 text-white shadow-md scale-105' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-650'}`}
+                      >
+                        {sub.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Gemini AI Integration Box */}
@@ -3239,12 +3310,12 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                   <div>
                     <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-2">PHÂN PHẦN ÔN TẬP (CATEGORY)</label>
                     <div className="grid grid-cols-4 gap-2">
-                      {['OT1', 'OT2', 'OT3', 'BỔ SUNG'].map(cat => (
+                      {['Lịch sử', 'Địa lí', 'Chung', 'BỔ SUNG'].map(cat => (
                         <button
                           type="button"
                           key={cat}
                           onClick={() => setNewQuestion(prev => ({ ...prev, category: cat }))}
-                          className={`py-2 rounded-lg text-xs font-black border transition-colors ${newQuestion.category === cat ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-600'}`}
+                          className={`py-2 rounded-lg text-xs font-black border transition-colors ${newQuestion.category === cat ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-50 border-slate-200 text-slate-650'}`}
                         >
                           {cat}
                         </button>
@@ -3664,45 +3735,102 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-slate-100">
                     <div>
                       <span className="block text-xs font-black text-slate-900 uppercase tracking-wider font-display">Danh mục câu hỏi hiện hoạt</span>
-                      <span className="block text-[10px] text-slate-450 uppercase font-black">Tổng số: {questions.length} câu • Lọc theo khối: {questions.filter(q => adminQuestionGradeFilter === 'Tất cả' || q.grade === adminQuestionGradeFilter).length} câu</span>
+                      <span className="block text-[10px] text-slate-450 uppercase font-black">
+                        Tổng số: {questions.length} câu • Tìm thấy:{' '}
+                        {
+                          questions.filter(q => {
+                            if (adminQuestionGradeFilter !== 'Tất cả' && q.grade !== adminQuestionGradeFilter) return false;
+                            if (adminQuestionSubjectFilter !== 'Tất cả' && getNormalizedSubject(q) !== adminQuestionSubjectFilter) return false;
+                            return true;
+                          }).length
+                        }{' '}
+                        câu bám sát bộ lọc
+                      </span>
                     </div>
                     {questions.length > 0 && (
                       <button
                         onClick={() => {
-                          const targetList = questions.filter(q => adminQuestionGradeFilter === 'Tất cả' || q.grade === adminQuestionGradeFilter);
-                          const title = adminQuestionGradeFilter === 'Tất cả' 
+                          const targetList = questions.filter(q => {
+                            if (adminQuestionGradeFilter !== 'Tất cả' && q.grade !== adminQuestionGradeFilter) return false;
+                            if (adminQuestionSubjectFilter !== 'Tất cả' && getNormalizedSubject(q) !== adminQuestionSubjectFilter) return false;
+                            return true;
+                          });
+                          let title = adminQuestionGradeFilter === 'Tất cả' 
                             ? "Ngân Hàng Đề Trắc Nghiệm Chất Lượng Cao - Tất Cả Khối" 
                             : `Ngân Hàng Đề Trắc Nghiệm Chất Lượng Cao - Khối Lớp ${adminQuestionGradeFilter}`;
+                          if (adminQuestionSubjectFilter !== 'Tất cả') {
+                            title += ` - Môn ${adminQuestionSubjectFilter}`;
+                          }
                           handleDownloadPdf(targetList, title, adminQuestionGradeFilter);
                         }}
                         className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[9px] tracking-wider px-3 py-1.5 rounded-lg active:scale-95 transition-all shadow-md cursor-pointer shrink-0"
                       >
-                        <FileText className="w-3.5 h-3.5 text-white animate-pulse" /> Xuất Đề Lớp {adminQuestionGradeFilter} (PDF)
+                        <FileText className="w-3.5 h-3.5 text-white animate-pulse" /> Xuất Đề Lọc (PDF)
                       </button>
                     )}
                   </div>
 
                   {/* Beautiful grade selector tabs for Question Bank */}
-                  <div className="flex flex-wrap gap-1.5 bg-slate-50 p-1.5 rounded-xl border border-slate-150">
-                    {['Tất cả', '6', '7', '8', '9'].map(g => {
-                      const count = questions.filter(q => g === 'Tất cả' || q.grade === g).length;
-                      return (
-                        <button
-                          type="button"
-                          key={g}
-                          onClick={() => setAdminQuestionGradeFilter(g as any)}
-                          className={`px-3 py-2 rounded-lg text-xs font-black uppercase transition-all flex items-center gap-2 ${adminQuestionGradeFilter === g ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-650 hover:bg-slate-100 border border-slate-205'}`}
-                        >
-                          <span>{g === 'Tất cả' ? '📚 Tất Cả Khối' : `Khối lớp ${g}`}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold ${adminQuestionGradeFilter === g ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-550'}`}>{count}</span>
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-1">
+                    <span className="block text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Lọc theo khối lớp:</span>
+                    <div className="flex flex-wrap gap-1.5 bg-slate-50 p-1.5 rounded-xl border border-slate-150">
+                      {['Tất cả', '6', '7', '8', '9'].map(g => {
+                        const count = questions.filter(q => {
+                          if (g !== 'Tất cả' && q.grade !== g) return false;
+                          if (adminQuestionSubjectFilter !== 'Tất cả' && getNormalizedSubject(q) !== adminQuestionSubjectFilter) return false;
+                          return true;
+                        }).length;
+                        return (
+                          <button
+                            type="button"
+                            key={g}
+                            onClick={() => setAdminQuestionGradeFilter(g as any)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all flex items-center gap-2 ${adminQuestionGradeFilter === g ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-650 hover:bg-slate-100 border border-slate-205'}`}
+                          >
+                            <span>{g === 'Tất cả' ? '📚 Tất Cả Khối' : `Khối lớp ${g}`}</span>
+                            <span className={`text-[10px] px-1.5 py-0.25 rounded-full font-extrabold ${adminQuestionGradeFilter === g ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-550'}`}>{count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Beautiful subject selector tabs for Question Bank */}
+                  <div className="space-y-1">
+                    <span className="block text-[9px] text-slate-400 font-extrabold uppercase tracking-wider">Lọc theo phân môn (Bộ môn):</span>
+                    <div className="flex flex-wrap gap-1.5 bg-slate-50 p-1.5 rounded-xl border border-slate-150">
+                      {[
+                        { key: 'Tất cả', label: '🔄 Tất cả môn', icon: '🌍' },
+                        { key: 'Lịch sử', label: '📚 Môn Lịch sử', icon: '🏺' },
+                        { key: 'Địa lí', label: '🌍 Môn Địa lí', icon: '🗺️' }
+                      ].map(s => {
+                        const count = questions.filter(q => {
+                          if (adminQuestionGradeFilter !== 'Tất cả' && q.grade !== adminQuestionGradeFilter) return false;
+                          if (s.key !== 'Tất cả' && getNormalizedSubject(q) !== s.key) return false;
+                          return true;
+                        }).length;
+                        return (
+                          <button
+                            type="button"
+                            key={s.key}
+                            onClick={() => setAdminQuestionSubjectFilter(s.key as any)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase transition-all flex items-center gap-2 ${adminQuestionSubjectFilter === s.key ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-slate-650 hover:bg-slate-100 border border-slate-205'}`}
+                          >
+                            <span>{s.label}</span>
+                            <span className={`text-[10px] px-1.5 py-0.25 rounded-full font-extrabold ${adminQuestionSubjectFilter === s.key ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-550'}`}>{count}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                     {questions
-                      .filter(q => adminQuestionGradeFilter === 'Tất cả' || q.grade === adminQuestionGradeFilter)
+                      .filter(q => {
+                        if (adminQuestionGradeFilter !== 'Tất cả' && q.grade !== adminQuestionGradeFilter) return false;
+                        if (adminQuestionSubjectFilter !== 'Tất cả' && getNormalizedSubject(q) !== adminQuestionSubjectFilter) return false;
+                        return true;
+                      })
                       .map((q, qidx) => {
                         const correctIdx = typeof q.correctAnswer === 'number' ? q.correctAnswer : q.correct_answer;
                         return (
