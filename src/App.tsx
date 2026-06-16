@@ -220,6 +220,8 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
 
   const [activeAdminTab, setActiveAdminTab] = useState('overview'); // overview, questions, school_class, email_perms, cloudflare, history
+  const [adminQuestionGradeFilter, setAdminQuestionGradeFilter] = useState<'Tất cả' | '6' | '7' | '8' | '9'>('Tất cả');
+  const [importTargetGrade, setImportTargetGrade] = useState<'6' | '7' | '8' | '9'>('9');
   const [leaderboardGradeFilter, setLeaderboardGradeFilter] = useState('Tất cả'); 
   const [leaderboardClassroomFilter, setLeaderboardClassroomFilter] = useState('Tất cả lớp');
   const [leaderboardSearchQuery, setLeaderboardSearchQuery] = useState('');
@@ -1812,7 +1814,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
         const genRes = await fetch('/api/generate-multiple-questions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: parseData.text, grade: newQuestion.grade || '9' })
+          body: JSON.stringify({ prompt: parseData.text, grade: importTargetGrade })
         });
 
         const genData = await genRes.json().catch(() => ({}));
@@ -1822,7 +1824,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
           const importedMapped = parsedList.map((x: any, i: number) => ({
             ...x,
             id: `imported_pdf_${Date.now()}_${i}`,
-            grade: x.grade || newQuestion.grade || '9',
+            grade: importTargetGrade,
             category: x.category || 'Lịch sử'
           }));
 
@@ -2328,7 +2330,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               </div>
               <div className="bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 text-center">
                 <span className="block font-black text-[9px] text-orange-400 uppercase">Khảo thí</span>
-                <span className="block text-xs font-black text-white">200+ đề</span>
+                <span className="block text-xs font-black text-white">10000+ đề</span>
               </div>
               <div className="bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 text-center">
                 <span className="block font-black text-[9px] text-orange-400 uppercase">Trợ lý</span>
@@ -3103,32 +3105,56 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               </div>
 
               {/* Data Import / Export managers */}
-              <div className="bg-white p-4 rounded-2xl border border-slate-150 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-left">
-                  <span className="block text-xs font-black text-slate-900 uppercase tracking-tight">📁 Quản lý kho tàng học liệu</span>
-                  <span className="block text-[10px] text-slate-450 uppercase font-bold">Lưu giữ, sao lưu dự trữ kho tàng đề thi an toàn</span>
+              <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                  <div className="text-left">
+                    <span className="block text-xs font-black text-slate-900 uppercase tracking-tight">📁 Quản lý kho tàng học liệu</span>
+                    <span className="block text-[10px] text-slate-450 uppercase font-bold">Lưu giữ, sao lưu dự trữ kho tàng đề thi an toàn</span>
+                  </div>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <input 
+                      type="file" 
+                      id="import-questions-file-input"
+                      ref={importQuestionsUploaderRef} 
+                      accept=".pdf" 
+                      onChange={handleImportQuestionsPdf} 
+                      className="hidden" 
+                    />
+                    <label 
+                      htmlFor="import-questions-file-input"
+                      className="cursor-pointer flex-1 sm:flex-none text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[11px] px-3.5 py-2 rounded-lg transition-colors uppercase tracking-wider flex items-center justify-center gap-1.5"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-red-600 animate-pulse" /> Nhập file PDF
+                    </label>
+                    <button 
+                      onClick={handleExportQuestions}
+                      className="flex-1 sm:flex-none text-center bg-indigo-55/60 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[11px] px-3.5 py-2 rounded-lg transition-colors uppercase tracking-wider flex items-center gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Tải ngân hàng
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <input 
-                    type="file" 
-                    id="import-questions-file-input"
-                    ref={importQuestionsUploaderRef} 
-                    accept=".pdf" 
-                    onChange={handleImportQuestionsPdf} 
-                    className="hidden" 
-                  />
-                  <label 
-                    htmlFor="import-questions-file-input"
-                    className="cursor-pointer flex-1 sm:flex-none text-center bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-[11px] px-3.5 py-2 rounded-lg transition-colors uppercase tracking-wider flex items-center justify-center gap-1.5"
-                  >
-                    <FileText className="w-3.5 h-3.5 text-red-600 animate-pulse" /> Nhập file PDF
-                  </label>
-                  <button 
-                    onClick={handleExportQuestions}
-                    className="flex-1 sm:flex-none text-center bg-indigo-55/60 hover:bg-indigo-100 text-indigo-700 font-extrabold text-[11px] px-3.5 py-2 rounded-lg transition-colors uppercase tracking-wider flex items-center gap-1.5"
-                  >
-                    <Download className="w-3.5 h-3.5" /> Tải ngân hàng
-                  </button>
+
+                <div className="bg-amber-50/50 border border-amber-200/60 p-3 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="text-left space-y-0.5">
+                    <span className="block font-black text-slate-800 text-[11px] uppercase tracking-wide">🎯 KHỐI LỚP ĐÍNH KÈM CHO ĐỀ NHẬP</span>
+                    <span className="block text-[10px] text-slate-500 font-semibold">Tất cả câu hỏi trích xuất từ file PDF sẽ tự động nạp vào đúng Khối này</span>
+                  </div>
+                  <div className="flex gap-1 justify-center sm:justify-start">
+                    {['6', '7', '8', '9'].map(g => (
+                      <button
+                        type="button"
+                        key={g}
+                        onClick={() => {
+                          setImportTargetGrade(g as any);
+                          showToast(`🎯 Đã chuyển Khối nạp đề PDF sang Khối ${g}`, 'info');
+                        }}
+                        className={`w-14 py-1.5 rounded-lg text-xs font-black border transition-all ${importTargetGrade === g ? 'bg-orange-600 border-orange-500 text-white shadow-md scale-105' : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-650'}`}
+                      >
+                        Khối {g}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -3635,83 +3661,113 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
 
               {activeAdminTab === 'questions' && (
                 <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-2 border-slate-100">
-                    <span className="block text-xs font-black text-slate-900 uppercase tracking-wider font-display">Danh mục câu hỏi hiện hoạt ({questions.length})</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-slate-100">
+                    <div>
+                      <span className="block text-xs font-black text-slate-900 uppercase tracking-wider font-display">Danh mục câu hỏi hiện hoạt</span>
+                      <span className="block text-[10px] text-slate-450 uppercase font-black">Tổng số: {questions.length} câu • Lọc theo khối: {questions.filter(q => adminQuestionGradeFilter === 'Tất cả' || q.grade === adminQuestionGradeFilter).length} câu</span>
+                    </div>
                     {questions.length > 0 && (
                       <button
-                        onClick={() => handleDownloadPdf(questions, "Toàn Bộ Ngân Hàng Đề Trắc Nghiệm Chất Lượng Cao", "Tất Cả")}
+                        onClick={() => {
+                          const targetList = questions.filter(q => adminQuestionGradeFilter === 'Tất cả' || q.grade === adminQuestionGradeFilter);
+                          const title = adminQuestionGradeFilter === 'Tất cả' 
+                            ? "Ngân Hàng Đề Trắc Nghiệm Chất Lượng Cao - Tất Cả Khối" 
+                            : `Ngân Hàng Đề Trắc Nghiệm Chất Lượng Cao - Khối Lớp ${adminQuestionGradeFilter}`;
+                          handleDownloadPdf(targetList, title, adminQuestionGradeFilter);
+                        }}
                         className="flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white font-black uppercase text-[9px] tracking-wider px-3 py-1.5 rounded-lg active:scale-95 transition-all shadow-md cursor-pointer shrink-0"
                       >
-                        <FileText className="w-3.5 h-3.5 text-white animate-pulse" /> Xuất Tất Cả Câu Hỏi (PDF)
+                        <FileText className="w-3.5 h-3.5 text-white animate-pulse" /> Xuất Đề Lớp {adminQuestionGradeFilter} (PDF)
                       </button>
                     )}
                   </div>
-                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                    {questions.map((q, qidx) => {
-                      const correctIdx = typeof q.correctAnswer === 'number' ? q.correctAnswer : q.correct_answer;
-                      return (
-                        <div key={q.id || qidx} className="bg-slate-50 border border-slate-100 p-4 rounded-xl text-xs flex flex-col sm:flex-row justify-between items-start gap-4">
-                          <div className="space-y-1.5 flex-1 w-full">
-                            <div className="flex gap-1 flex-wrap">
-                              <span className="bg-indigo-150 text-indigo-800 font-black text-[9px] px-2 py-0.5 rounded">STT: {q.stt || qidx + 1}</span>
-                              <span className="bg-orange-100 text-orange-700 font-black text-[9px] px-2 py-0.5 rounded">Lớp {q.grade}</span>
-                              <span className="bg-slate-200 text-slate-700 font-black text-[9px] px-2 py-0.5 rounded">{q.type}</span>
-                              {q.category && (
-                                <span className="bg-teal-100 text-teal-800 font-black text-[9px] px-2 py-0.5 rounded">{q.category}</span>
-                              )}
-                            </div>
-                            <p className="font-extrabold text-slate-900 leading-snug">{q.content}</p>
-                            
-                            {/* Visual Options representation to let teachers inspect the loaded question correctly */}
-                            {q.options && q.options.length > 0 && (
-                              <div className="mt-2 text-slate-500 grid grid-cols-1 md:grid-cols-2 gap-1 text-[11px] border-t border-dashed border-slate-200 pt-2">
-                                {q.options.map((opt: any, oidx: number) => {
-                                  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
-                                  const isCorrect = correctIdx === oidx;
-                                  return (
-                                    <div key={oidx} className={`flex items-start gap-1 p-1 rounded ${isCorrect ? 'bg-emerald-50 text-emerald-700 font-semibold border-l-2 border-emerald-500' : ''}`}>
-                                      <span>{letters[oidx] || oidx + 1}.</span>
-                                      <span>{opt.text || opt}</span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
 
-                            {/* Show Explanation if available */}
-                            {q.explanation && (
-                              <p className="text-[10px] text-slate-500 italic mt-1.5 bg-slate-100 p-1.5 rounded border border-slate-200">
-                                💡 Giải thích: {q.explanation}
-                              </p>
-                            )}
-                          </div>
-                          
-                          <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0 border-t sm:border-t-0 pt-2 sm:pt-0">
-                            <button
-                              type="button"
-                              onClick={() => setEditingQuestion({ ...q })}
-                              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-750 font-black uppercase text-[9px] tracking-wide px-3 py-1.5 rounded-lg active:scale-95 transition-all text-center cursor-pointer shadow-sm"
-                            >
-                              <Pencil className="w-3.5 h-3.5" /> Sửa tài liệu
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadPdf([q], `Tài liệu ôn tập Lịch sử & Địa lí - Lớp ${q.grade}`, q.grade)}
-                              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-250 text-red-750 font-black uppercase text-[9px] tracking-wide px-3 py-1.5 rounded-lg active:scale-95 transition-all text-center cursor-pointer shadow-sm"
-                            >
-                              <FileText className="w-3.5 h-3.5 text-red-600" /> Tải tài liệu
-                            </button>
-                            <button 
-                              type="button"
-                              onClick={() => handleDeleteQuestion(q.id)}
-                              className="flex-1 sm:flex-none text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg font-black tracking-wider uppercase text-[9px] text-center border border-rose-100 active:scale-95 transition-all cursor-pointer"
-                            >
-                              Xóa bỏ
-                            </button>
-                          </div>
-                        </div>
+                  {/* Beautiful grade selector tabs for Question Bank */}
+                  <div className="flex flex-wrap gap-1.5 bg-slate-50 p-1.5 rounded-xl border border-slate-150">
+                    {['Tất cả', '6', '7', '8', '9'].map(g => {
+                      const count = questions.filter(q => g === 'Tất cả' || q.grade === g).length;
+                      return (
+                        <button
+                          type="button"
+                          key={g}
+                          onClick={() => setAdminQuestionGradeFilter(g as any)}
+                          className={`px-3 py-2 rounded-lg text-xs font-black uppercase transition-all flex items-center gap-2 ${adminQuestionGradeFilter === g ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-650 hover:bg-slate-100 border border-slate-205'}`}
+                        >
+                          <span>{g === 'Tất cả' ? '📚 Tất Cả Khối' : `Khối lớp ${g}`}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-extrabold ${adminQuestionGradeFilter === g ? 'bg-indigo-700 text-white' : 'bg-slate-100 text-slate-550'}`}>{count}</span>
+                        </button>
                       );
                     })}
+                  </div>
+
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    {questions
+                      .filter(q => adminQuestionGradeFilter === 'Tất cả' || q.grade === adminQuestionGradeFilter)
+                      .map((q, qidx) => {
+                        const correctIdx = typeof q.correctAnswer === 'number' ? q.correctAnswer : q.correct_answer;
+                        return (
+                          <div key={q.id || qidx} className="bg-slate-50 border border-slate-100 p-4 rounded-xl text-xs flex flex-col sm:flex-row justify-between items-start gap-4">
+                            <div className="space-y-1.5 flex-1 w-full">
+                              <div className="flex gap-1 flex-wrap">
+                                <span className="bg-indigo-150 text-indigo-800 font-black text-[9px] px-2 py-0.5 rounded">STT: {q.stt || qidx + 1}</span>
+                                <span className="bg-orange-100 text-orange-700 font-black text-[9px] px-2 py-0.5 rounded">Lớp {q.grade}</span>
+                                <span className="bg-slate-200 text-slate-700 font-black text-[9px] px-2 py-0.5 rounded">{q.type}</span>
+                                {q.category && (
+                                  <span className="bg-teal-100 text-teal-800 font-black text-[9px] px-2 py-0.5 rounded">{q.category}</span>
+                                )}
+                              </div>
+                              <p className="font-extrabold text-slate-900 leading-snug">{q.content}</p>
+                              
+                              {/* Visual Options representation to let teachers inspect the loaded question correctly */}
+                              {q.options && q.options.length > 0 && (
+                                <div className="mt-2 text-slate-500 grid grid-cols-1 md:grid-cols-2 gap-1 text-[11px] border-t border-dashed border-slate-200 pt-2">
+                                  {q.options.map((opt: any, oidx: number) => {
+                                    const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+                                    const isCorrect = correctIdx === oidx;
+                                    return (
+                                      <div key={oidx} className={`flex items-start gap-1 p-1 rounded ${isCorrect ? 'bg-emerald-50 text-emerald-700 font-semibold border-l-2 border-emerald-500' : ''}`}>
+                                        <span>{letters[oidx] || oidx + 1}.</span>
+                                        <span>{opt.text || opt}</span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Show Explanation if available */}
+                              {q.explanation && (
+                                <p className="text-[10px] text-slate-500 italic mt-1.5 bg-slate-100 p-1.5 rounded border border-slate-200">
+                                  💡 Giải thích: {q.explanation}
+                                </p>
+                              )}
+                            </div>
+                            
+                            <div className="flex sm:flex-col gap-2 shrink-0 w-full sm:w-auto mt-2 sm:mt-0 border-t sm:border-t-0 pt-2 sm:pt-0">
+                              <button
+                                type="button"
+                                onClick={() => setEditingQuestion({ ...q })}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-750 font-black uppercase text-[9px] tracking-wide px-3 py-1.5 rounded-lg active:scale-95 transition-all text-center cursor-pointer shadow-sm"
+                              >
+                                <Pencil className="w-3.5 h-3.5" /> Sửa tài liệu
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadPdf([q], `Tài liệu ôn tập Lịch sử & Địa lí - Lớp ${q.grade}`, q.grade)}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-250 text-red-750 font-black uppercase text-[9px] tracking-wide px-3 py-1.5 rounded-lg active:scale-95 transition-all text-center cursor-pointer shadow-sm"
+                              >
+                                <FileText className="w-3.5 h-3.5 text-red-600" /> Tải tài liệu
+                              </button>
+                              <button 
+                                type="button"
+                                onClick={() => handleDeleteQuestion(q.id)}
+                                className="flex-1 sm:flex-none text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-lg font-black tracking-wider uppercase text-[9px] text-center border border-rose-100 active:scale-95 transition-all cursor-pointer"
+                              >
+                                Xóa bỏ
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 </div>
               )}

@@ -768,7 +768,7 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
   "content": "Nội dung câu hỏi trắc nghiệm một lựa chọn rõ ràng và sâu sắc",
   "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
   "type": "SINGLE",
-  "grade": "${grade || '9'}",
+  "grade": "6" hoặc "7" hoặc "8" hoặc "9",
   "options": [
     { "text": "Phương án A", "link": "", "image": "" },
     { "text": "Phương án B", "link": "", "image": "" },
@@ -783,7 +783,7 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
   "content": "Nhận định lịch sử hoặc địa lí cần học sinh xác định Đúng hay Sai",
   "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
   "type": "TRUE FALSE",
-  "grade": "${grade || '9'}",
+  "grade": "6" hoặc "7" hoặc "8" hoặc "9",
   "options": [
     { "text": "Đúng", "link": "", "image": "" },
     { "text": "Sai", "link": "", "image": "" }
@@ -796,7 +796,7 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
   "content": "Câu hỏi yêu cầu câu trả lời ngắn dưới dạng một cụm từ, con số hoặc mốc lịch sử ngắn gọn",
   "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
   "type": "SHORT_ANSWER",
-  "grade": "${grade || '9'}",
+  "grade": "6" hoặc "7" hoặc "8" hoặc "9",
   "options": [],
   "correctAnswer": "Câu trả lời đúng ngắn gọn (ví dụ: '1945' hoặc 'Hồ Chí Minh')",
   "explanation": "Giải thích ngắn gọn ý nghĩa thông tin câu trả lời."
@@ -805,15 +805,16 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
 
       const systemPrompt = `Bạn là một chuyên gia khảo thí thiết kế đề thi môn Lịch sử và Địa lí xuất sắc cấp THCS.
 Nhiệm vụ: Hãy nghiên cứu kỹ văn bản tài liệu học tập được cung cấp, sau đó soạn thảo và sinh ra danh sách tối đa ${num} câu hỏi thuộc loại [${typeName}] cực kỳ chất lượng, bám sát từng sự kiện, địa danh, mốc thời gian, số liệu có trong văn bản.
-Khai thác triệt để: Hãy cố gắng tạo ra số lượng câu hỏi nhiều nhất có thể (lý tưởng nhất là từ 40 đến ${num} câu hỏi độc lập, không trùng lặp) bằng cách đặt câu hỏi chi tiết về từng câu văn, mỗi đoạn và chi tiết nhỏ trong bài đọc.
+Khai thác triệt để và phân bổ đều khối lớp: Hãy tạo ra số lượng câu hỏi nhiều nhất có thể (lý tưởng tốt nhất là phân bổ đều cho các khối lớp THCS: "6", "7", "8", và "9", mỗi khối lớp khoảng 15 câu độc lập, không trùng lặp, để tổng đạt mốc tối đa ${num} câu hỏi của loại này). Hãy gán thuộc tính "grade" là một trong bốn giá trị chuỗi: "6", "7", "8", hoặc "9" tương ứng với khối lớp phù hợp với nội dung bài học đó.
 
 Cấu trúc từng câu hỏi trong mảng JSON phải đúng 100% định dạng schema sau:
 ${formatSchema}
 
 * Lưu ý đặc biệt:
-1. "correctAnswer" đối với loại SINGLE là index số nguyên của mảng options (bắt đầu từ 0). Đối với TRUE FALSE là 0 (Đúng) hoặc 1 (Sai). Đối với SHORT_ANSWER là một chuỗi văn bản (string) chính xác tuyệt đối.
-2. Với loại "TRUE FALSE", chỉ cần cung cấp đúng 2 options: [{"text": "Đúng", "link": "", "image": ""}, {"text": "Sai", "link": "", "image": ""}] và "correctAnswer" là 0 hoặc 1.
-3. Nghiêm cấm trả về bất kỳ văn bản giải thích phụ nào ở ngoài, không bọc JSON trong khối dấu nháy ngược \`\`\`json. Hãy trả về trực tiếp một mảng JSON hợp lệ chứa các câu hỏi dạng: [ ... ].`;
+1. "grade" BẮT BUỘC chỉ được chọn một trong bốn giá trị: "6", "7", "8", "9". Hãy phân bổ số lượng tương đương nhau cho mỗi khối lớp (khoảng 15 câu/khối lớp).
+2. "correctAnswer" đối với loại SINGLE là index số nguyên của mảng options (bắt đầu từ 0). Đối với TRUE FALSE là 0 (Đúng) hoặc 1 (Sai). Đối với SHORT_ANSWER là một chuỗi văn bản (string) chính xác tuyệt đối.
+3. Với loại "TRUE FALSE", chỉ cần cung cấp đúng 2 options: [{"text": "Đúng", "link": "", "image": ""}, {"text": "Sai", "link": "", "image": ""}] và "correctAnswer" là 0 hoặc 1.
+4. Nghiêm cấm trả về bất kỳ văn bản giải thích phụ nào ở ngoài, không bọc JSON trong khối dấu nháy ngược \`\`\`json. Hãy trả về trực tiếp một mảng JSON hợp lệ chứa các câu hỏi dạng: [ ... ].`;
 
       try {
         const response = await ai.models.generateContent({
