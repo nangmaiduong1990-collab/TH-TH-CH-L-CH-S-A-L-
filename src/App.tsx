@@ -6,6 +6,60 @@ import {
   Calendar, School, Mail, RefreshCw, Key, HelpCircle, CheckSquare, Lock,
   Pencil
 } from 'lucide-react';
+import { get40QuestionsForGrade } from './question_bank';
+
+const extractPdfTextClientSide = async (file: File): Promise<string> => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let pdfjsLib = (window as any).pdfjsLib;
+      if (!pdfjsLib) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+        script.async = true;
+        
+        await new Promise((res, rej) => {
+          script.onload = () => res(true);
+          script.onerror = () => rej(new Error('Không thể tải bộ thư viện đọc PDF từ CDN.'));
+          document.head.appendChild(script);
+        });
+        
+        pdfjsLib = (window as any)['pdfjs-dist/build/pdf'] || (window as any).pdfjsLib;
+      }
+
+      if (!pdfjsLib) {
+        throw new Error('Không thể khởi tạo bộ công cụ giải mã PDF.');
+      }
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const arrBuffer = e.target?.result as ArrayBuffer;
+          const loadingTask = pdfjsLib.getDocument({ data: arrBuffer });
+          const pdf = await loadingTask.promise;
+          
+          let extractedText = "";
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item: any) => item.str)
+              .join(' ');
+            extractedText += pageText + '\n';
+          }
+          resolve(extractedText);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      reader.onerror = () => reject(new Error('Lỗi FileReader.'));
+      reader.readAsArrayBuffer(file);
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
 
 const INITIAL_QUESTIONS = [
   {
@@ -122,16 +176,16 @@ const INITIAL_EXAM_ROOMS = [
 ];
 
 const MOST_DOWNLOADED_RESOURCES = [
-  { id: 'res1_t1', title: 'Đề Cương Học Và Kiến Thức Lịch Sử & Địa Lí Khối 6', grade: '6', category: 'OT1', questions: 45, downloads: 1250, color: 'border-orange-500', svgType: 'history' },
-  { id: 'res2_t1', title: 'Đề Cương Học Và Kiến Thức Lịch Sử & Địa Lí Khối 7', grade: '7', category: 'OT1', questions: 45, downloads: 1102, color: 'border-orange-500', svgType: 'geography' },
-  { id: 'res3_t1', title: 'Đề Cương Học Và Kiến Thức Lịch Sử & Địa Lí Khối 8', grade: '8', category: 'OT1', questions: 45, downloads: 984, color: 'border-orange-500', svgType: 'history' },
+  { id: 'res1_t1', title: 'Đề Cương Học Và Kiến Thức Lịch Sử & Địa Lí Khối 6', grade: '6', category: 'OT1', questions: 40, downloads: 1250, color: 'border-orange-500', svgType: 'history' },
+  { id: 'res2_t1', title: 'Đề Cương Học Và Kiến Thức Lịch Sử & Địa Lí Khối 7', grade: '7', category: 'OT1', questions: 40, downloads: 1102, color: 'border-orange-500', svgType: 'geography' },
+  { id: 'res3_t1', title: 'Đề Cương Học Và Kiến Thức Lịch Sử & Địa Lí Khối 8', grade: '8', category: 'OT1', questions: 40, downloads: 984, color: 'border-orange-500', svgType: 'history' },
   { id: 'res4_t1', title: 'Đề Cương Học Và Kiến Thức Lịch Sử & Địa Lí Khối 9', grade: '9', category: 'OT1', questions: 40, downloads: 870, color: 'border-orange-500', svgType: 'geography' },
 ];
 
 const NEWEST_RESOURCES = [
-  { id: 'res5_n1', title: 'Đề Kiểm Tra Lịch Sử & Địa Lí Khối 6', grade: '6', category: 'OT1', questions: 45, downloads: 412, color: 'border-blue-400', svgType: 'exam' },
-  { id: 'res6_n1', title: 'Đề Kiểm Tra Lịch Sử & Địa Lí Khối 7', grade: '7', category: 'OT1', questions: 45, downloads: 356, color: 'border-blue-400', svgType: 'exam' },
-  { id: 'res7_n1', title: 'Đề Kiểm Tra Lịch Sử & Địa Lí Khối 8', grade: '8', category: 'OT2', questions: 45, downloads: 288, color: 'border-blue-400', svgType: 'exam' },
+  { id: 'res5_n1', title: 'Đề Kiểm Tra Lịch Sử & Địa Lí Khối 6', grade: '6', category: 'OT1', questions: 40, downloads: 412, color: 'border-blue-400', svgType: 'exam' },
+  { id: 'res6_n1', title: 'Đề Kiểm Tra Lịch Sử & Địa Lí Khối 7', grade: '7', category: 'OT1', questions: 40, downloads: 356, color: 'border-blue-400', svgType: 'exam' },
+  { id: 'res7_n1', title: 'Đề Kiểm Tra Lịch Sử & Địa Lí Khối 8', grade: '8', category: 'OT2', questions: 40, downloads: 288, color: 'border-blue-400', svgType: 'exam' },
   { id: 'res8_n1', title: 'Đề Kiểm Tra Lịch Sử & Địa Lí Khối 9', grade: '9', category: 'OT3', questions: 40, downloads: 194, color: 'border-blue-400', svgType: 'exam' },
 ];
 
@@ -856,57 +910,123 @@ export default function App() {
     showToast('Đã đăng xuất tài khoản quản trị thành công!', 'info');
   };
 
+  const fallbackServerPdfParse = (file: File, target: 'portal' | 'questions') => {
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const result = event.target?.result as string;
+      if (!result) {
+        showToast('❌ Không thể nạp dữ liệu tập tin PDF.', 'error');
+        return;
+      }
+      
+      const base64Index = result.indexOf('base64,');
+      if (base64Index === -1) {
+        showToast('❌ Bản mã hóa PDF bị lỗi.', 'error');
+        return;
+      }
+      
+      const base64Data = result.substring(base64Index + 7);
+      
+      try {
+        const parseRes = await fetch('/api/parse-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pdfBase64: base64Data, filename: file.name })
+        });
+        
+        const parseData = await parseRes.json().catch(() => ({}));
+        
+        if (parseRes.ok && parseData.success && parseData.text) {
+          if (target === 'portal') {
+            setAiPrompt(parseData.text);
+            showToast(`📂 Phân tích bằng Trí tuệ Nhân tạo thành công từ "${file.name}"! 🎉`, 'success');
+          } else {
+            showToast('🤖 Đang cấu trúc ngân hàng câu hỏi trắc nghiệm từ nội dung PDF qua AI...', 'info');
+            triggerGenerateFromText(parseData.text);
+          }
+        } else {
+          const errorMsg = parseData.error || `Lỗi AI-OCR (${parseRes.status})`;
+          showToast(`❌ Lỗi trích xuất AI: ${errorMsg}`, 'error');
+        }
+      } catch (err: any) {
+        console.error(err);
+        showToast(`❌ Lỗi kết nối: ${err.message || 'Không thể liên lạc với máy chủ AI.'}`, 'error');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerGenerateFromText = async (text: string) => {
+    try {
+      const genRes = await fetch('/api/generate-multiple-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          prompt: text, 
+          grade: importTargetGrade,
+          subject: importTargetSubject
+        })
+      });
+
+      const genData = await genRes.json().catch(() => ({}));
+
+      if (genRes.ok && genData.success && Array.isArray(genData.questions)) {
+        const parsedList = genData.questions;
+        const importedMapped = parsedList.map((x: any, i: number) => {
+          let cat = x.category || 'Lịch sử';
+          if (importTargetSubject !== 'Tự động') {
+            cat = importTargetSubject;
+          } else {
+            cat = getNormalizedSubject(x);
+          }
+          return {
+            ...x,
+            id: `imported_pdf_${Date.now()}_${i}`,
+            grade: importTargetGrade,
+            category: cat
+          };
+        });
+
+        const qMap = new Map(questions.map((q: any) => [q.id, q]));
+        for (const item of importedMapped) {
+          qMap.set(item.id, item);
+        }
+        const next = Array.from(qMap.values());
+
+        saveQuestions(next, 'import', importedMapped);
+        showToast(`🎉 Đã tự động phân tách & nhập thành công ${importedMapped.length} câu hỏi mới từ tập tin PDF của bạn!`, 'success');
+      } else {
+        const errMsg = genData.error || `Lỗi máy chủ (${genRes.status})`;
+        showToast(`❌ AI lỗi tạo câu hỏi: ${errMsg}`, 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast(`❌ Lỗi kết nối AI: ${err.message || 'Không thể tạo ngân hàng câu hỏi.'}`, 'error');
+    }
+  };
+
   const handleDocumentUpload = (e: any) => {
     const file = e.target.files[0];
     if (!file) return;
 
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      showToast('📄 Đang tải và phân tích file PDF bằng trợ lý trí lực Gemini AI...', 'info');
+      showToast('📄 Đang đọc và phân tích file PDF bằng trình duyệt...', 'info');
       
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const result = event.target?.result as string;
-        if (!result) {
-          showToast('❌ Không thể nạp dữ liệu tập tin PDF.', 'error');
-          return;
-        }
-        
-        // Extract base64 part
-        const base64Index = result.indexOf('base64,');
-        if (base64Index === -1) {
-          showToast('❌ Định dạng file PDF không thể giải mã.', 'error');
-          return;
-        }
-        
-        const base64Data = result.substring(base64Index + 7);
-        
-        try {
-          const parseRes = await fetch('/api/parse-pdf', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pdfBase64: base64Data, filename: file.name })
-          });
-          
-          const parseData = await parseRes.json().catch(() => ({}));
-          
-          if (parseRes.ok && parseData.success && parseData.text) {
-            setAiPrompt(parseData.text);
-            showToast(`📂 Nạp & Trích xuất toàn bộ văn bản từ "${file.name}" thành công! 🎉`, 'success');
+      extractPdfTextClientSide(file)
+        .then((extractedText) => {
+          if (extractedText && extractedText.trim().length > 50) {
+            setAiPrompt(extractedText);
+            showToast(`📂 Đã trích xuất ${extractedText.trim().length} ký tự từ PDF trực tiếp bằng trình duyệt! 🎉`, 'success');
           } else {
-            const errorMsg = parseData.error || `Lỗi máy chủ (${parseRes.status})`;
-            showToast(`❌ Lỗi trích xuất: ${errorMsg}`, 'error');
+            showToast('🔄 Tài liệu rỗng hoặc dạng ảnh quét, đang kết nối công cụ AI OCR...', 'info');
+            fallbackServerPdfParse(file, 'portal');
           }
-        } catch (err: any) {
-          console.error(err);
-          showToast(`❌ Lỗi kết nối: ${err.message || 'Không thể liên lạc với máy chủ AI để xử lý file PDF.'}`, 'error');
-        }
-      };
-      
-      reader.onerror = () => {
-        showToast('❌ Không thể đọc tập tin PDF này.', 'error');
-      };
-      
-      reader.readAsDataURL(file);
+        })
+        .catch((err) => {
+          console.warn("Client PDF parse failed, using fallback:", err);
+          showToast('🔄 Chuyển hướng tập tin qua công cụ AI OCR...', 'info');
+          fallbackServerPdfParse(file, 'portal');
+        });
     } else {
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -1068,23 +1188,22 @@ export default function App() {
 
   const handleStartResourcePractice = (res) => {
     if (!checkProfileInitialized()) return;
-    const filtered = questions.filter(q => q.grade === res.grade);
-    if (filtered.length === 0) {
-      showToast(`Chưa sẵn sàng câu hỏi cho học liệu ${res.title}!`, 'warning');
-      return;
-    }
+    const finalQuestions = get40QuestionsForGrade(res.grade);
+    const examCode = `MÃ ĐỀ: LH-K${res.grade}_40_${Math.floor(100 + Math.random() * 900)}`;
+
     setActiveExam({
-      title: `Khảo thí: ${res.title}`,
-      questionsList: filtered,
+      title: `${res.title} (${examCode})`,
+      questionsList: finalQuestions,
       currentIdx: 0,
       answers: {},
-      timeLeftOriginal: 20 * 60,
-      timeLeft: 20 * 60,
+      timeLeftOriginal: 45 * 60,
+      timeLeft: 45 * 60,
       isPractice: true,
-      grade: res.grade
+      grade: res.grade,
+      code: examCode
     });
     setCurrentView('exam-room');
-    showToast(`🎯 Đang mở đề cương ôn tập: ${res.title}`, 'success');
+    showToast(`🎯 Trận đấu luyện tập đã kích hoạt với mã đề: ${examCode} (40 câu Lịch sử & Địa lí)!`, 'success');
   };
 
   const handleStartGeneralPractice = (grade) => {
@@ -1291,6 +1410,12 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
             <div class="option-item"><strong>B.</strong> SAI (Chưa chính xác)</div>
           </div>
         `;
+      } else if (q.type === 'SHORT_ANSWER') {
+        optionsHtml = `
+          <div style="margin-top: 8px; margin-bottom: 5px; margin-left: 15px;">
+            <strong>Đáp án của học sinh:</strong> .........................................................................................................................................
+          </div>
+        `;
       } else {
         const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
         const optsList = q.options || [];
@@ -1326,6 +1451,9 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
       let ansText = '';
       if (q.type === 'TRUE FALSE') {
         ansText = q.correctAnswer === 0 ? 'Đúng' : 'Sai';
+      } else if (q.type === 'SHORT_ANSWER') {
+        const scVal = q.correctAnswer !== undefined ? q.correctAnswer : q.correct_answer;
+        ansText = typeof scVal === 'string' ? scVal : (scVal !== undefined ? String(scVal) : '');
       } else if (q.type === 'MULTIPLE') {
         if (Array.isArray(q.correctAnswer)) {
           ansText = q.correctAnswer.map((c: any) => letters[c] || c + 1).join(', ');
@@ -1807,95 +1935,24 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
       return;
     }
 
-    showToast('📄 Đang tải và trích xuất nội dung đề thi PDF bằng AI...', 'info');
+    showToast('📄 Đang đọc và phân tích cấu trúc đề thi PDF bằng trình duyệt...', 'info');
 
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const result = event.target?.result as string;
-      if (!result) {
-        showToast('❌ Không thể nạp dữ liệu từ file PDF.', 'error');
-        return;
-      }
-
-      const base64Index = result.indexOf('base64,');
-      if (base64Index === -1) {
-        showToast('❌ Lỗi định dạng mã hóa tệp PDF.', 'error');
-        return;
-      }
-
-      const base64Data = result.substring(base64Index + 7);
-
-      try {
-        // Step 1: Parse PDF to text
-        const parseRes = await fetch('/api/parse-pdf', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pdfBase64: base64Data, filename: file.name })
-        });
-
-        const parseData = await parseRes.json().catch(() => ({}));
-
-        if (!parseRes.ok || !parseData.success || !parseData.text) {
-          const errMsg = parseData.error || `Lỗi máy chủ (${parseRes.status})`;
-          showToast(`❌ Lỗi phân tích văn bản PDF: ${errMsg}`, 'error');
-          return;
-        }
-
-        showToast('🤖 Đang nhờ trợ lý AI tự động tạo ngân hàng câu hỏi trắc nghiệm từ PDF...', 'info');
-
-        // Step 2: Generate questions
-        const genRes = await fetch('/api/generate-multiple-questions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            prompt: parseData.text, 
-            grade: importTargetGrade,
-            subject: importTargetSubject
-          })
-        });
-
-        const genData = await genRes.json().catch(() => ({}));
-
-        if (genRes.ok && genData.success && Array.isArray(genData.questions)) {
-          const parsedList = genData.questions;
-          const importedMapped = parsedList.map((x: any, i: number) => {
-            let cat = x.category || 'Lịch sử';
-            if (importTargetSubject !== 'Tự động') {
-              cat = importTargetSubject;
-            } else {
-              cat = getNormalizedSubject(x);
-            }
-            return {
-              ...x,
-              id: `imported_pdf_${Date.now()}_${i}`,
-              grade: importTargetGrade,
-              category: cat
-            };
-          });
-
-          const qMap = new Map(questions.map(q => [q.id, q]));
-          for (const item of importedMapped) {
-            qMap.set(item.id, item);
-          }
-          const next = Array.from(qMap.values());
-
-          saveQuestions(next, 'import', importedMapped);
-          showToast(`🎉 Đã tự động phân tách & nhập thành công ${importedMapped.length} câu hỏi mới từ tập tin PDF của bạn!`, 'success');
+    extractPdfTextClientSide(file)
+      .then((extractedText) => {
+        if (extractedText && extractedText.trim().length > 50) {
+          showToast('🤖 Đang tải nội dung đề và biên soạn câu hỏi trắc nghiệm qua AI...', 'info');
+          triggerGenerateFromText(extractedText);
         } else {
-          const errMsg = genData.error || `Lỗi máy chủ (${genRes.status})`;
-          showToast(`❌ AI lỗi tạo câu hỏi: ${errMsg}`, 'error');
+          showToast('🔄 Đề thi dạng ảnh chụp/quét, đang kích hoạt Trình phân tích AI OCR...', 'info');
+          fallbackServerPdfParse(file, 'questions');
         }
-      } catch (err: any) {
-        console.error(err);
-        showToast(`❌ Lỗi kết nối AI: ${err.message || 'Không thể gửi tài liệu lên hệ thống'}`, 'error');
-      }
-    };
+      })
+      .catch((err) => {
+        console.warn("Client PDF parse failed, trying server-side fallback:", err);
+        showToast('🔄 Chuyển hướng xử lý sang Trình phân tích AI OCR...', 'info');
+        fallbackServerPdfParse(file, 'questions');
+      });
 
-    reader.onerror = () => {
-      showToast('❌ Không thể đọc file PDF.', 'error');
-    };
-
-    reader.readAsDataURL(file);
     e.target.value = '';
   };
 
@@ -2461,10 +2518,21 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
           </nav>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+            <button
+              onClick={() => {
+                if (isAdminLoggedIn) {
+                  setCurrentView('admin');
+                } else {
+                  setIsEditingProfile(true);
+                }
+              }}
+              className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200 hover:bg-slate-200 transition-colors cursor-pointer"
+            >
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[10px] font-black text-slate-700 uppercase">{userData.name !== 'Chưa danh tính' ? userData.name.split(' ').pop() : 'HỌC SINH'}</span>
-            </div>
+              <span className="text-[10px] font-black text-slate-700 uppercase">
+                {isAdminLoggedIn ? 'QUẢN TRỊ: DƯƠNG THỊ HIỆP' : (userData.name !== 'Chưa danh tính' && userData.name.trim().toUpperCase() !== 'A' ? userData.name.split(' ').pop() : 'QUẢN TRỊ: DƯƠNG THỊ HIỆP')}
+              </span>
+            </button>
           </div>
 
         </div>
@@ -3932,120 +4000,120 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                           <span>🏢 {s.name}</span>
                           <button 
                             onClick={() => {
-                              setSchoolsList(prev => prev.filter(x => x.id !== s.id));
-                              showToast(`Đã tháo quyền liên kết trường ${s.name}!`, 'info');
-                            }}
-                            className="text-[10px] text-rose-600"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+                               setSchoolsList(prev => prev.filter(x => x.id !== s.id));
+                               showToast(`Đã tháo quyền liên kết trường ${s.name}!`, 'info');
+                             }}
+                             className="text-[10px] text-rose-600"
+                           >
+                             Xóa whitelist
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+               )}
 
-              {activeAdminTab === 'email_perms' && (
-                <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
-                  <h3 className="text-xs font-black uppercase text-slate-900">Danh sách Whitelist Email Admin ({emailWhitelist.length})</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
-                      <span className="block text-[11px] font-black text-slate-500 uppercase text-slate-600">Phân quyền Email Admin giám thị</span>
-                      <input 
-                        type="email" 
-                        placeholder="hiep.duong@school.edu.vn" 
-                        value={newWhitelistedEmail}
-                        onChange={(e) => setNewWhitelistedEmail(e.target.value)}
-                        className="w-full p-2 text-xs border border-slate-200 rounded"
-                      />
-                      <button 
-                        onClick={() => {
-                          if (!newWhitelistedEmail.trim() || !newWhitelistedEmail.includes('@')) {
-                            showToast('Email không đúng định dạng hợp lệ!', 'warning');
-                            return;
-                          }
-                          setEmailWhitelist(prev => [...prev, newWhitelistedEmail.toLowerCase().trim()]);
-                          setNewWhitelistedEmail('');
-                          showToast('Thêm whitelist email mới thành công!', 'success');
-                        }}
-                        className="w-full py-2 bg-indigo-600 text-white font-bold text-xs rounded"
-                      >
-                        Phân quyền giám sát
-                      </button>
-                    </div>
+               {activeAdminTab === 'email_perms' && (
+                 <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+                   <h3 className="text-xs font-black uppercase text-slate-900">Danh sách Whitelist Email Admin ({emailWhitelist.length})</h3>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                       <span className="block text-[11px] font-black text-slate-500 uppercase text-slate-600">Phân quyền Email Admin giám thị</span>
+                       <input 
+                         type="email" 
+                         placeholder="hiep.duong@school.edu.vn" 
+                         value={newWhitelistedEmail}
+                         onChange={(e) => setNewWhitelistedEmail(e.target.value)}
+                         className="w-full p-2 text-xs border border-slate-200 rounded"
+                       />
+                       <button 
+                         onClick={() => {
+                           if (!newWhitelistedEmail.trim() || !newWhitelistedEmail.includes('@')) {
+                             showToast('Email không đúng định dạng hợp lệ!', 'warning');
+                             return;
+                           }
+                           setEmailWhitelist(prev => [...prev, newWhitelistedEmail.toLowerCase().trim()]);
+                           setNewWhitelistedEmail('');
+                           showToast('Thêm whitelist email mới thành công!', 'success');
+                         }}
+                         className="w-full py-2 bg-indigo-600 text-white font-bold text-xs rounded"
+                       >
+                         Phân quyền giám sát
+                       </button>
+                     </div>
 
-                    <div className="bg-white border border-slate-200 p-3 rounded-xl divide-y divide-slate-100 max-h-60 overflow-y-auto w-full">
-                      {emailWhitelist.map(email => (
-                        <div key={email} className="py-2 flex items-center justify-between text-xs font-bold text-slate-700">
-                          <span>📧 {email}</span>
-                          <button 
-                            onClick={() => {
-                              if (email === 'admin@quizmaster.com') return;
-                              setEmailWhitelist(prev => prev.filter(x => x !== email));
-                              showToast(`Đã tháo quyền email ${email}!`, 'info');
-                            }}
-                            className="text-rose-600 text-[10px]"
-                          >
-                            Thu hồi
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-                </>
-              )}
-            </div>
-          )}
+                     <div className="bg-white border border-slate-200 p-3 rounded-xl divide-y divide-slate-100 max-h-60 overflow-y-auto w-full">
+                       {emailWhitelist.map(email => (
+                         <div key={email} className="py-2 flex items-center justify-between text-xs font-bold text-slate-700">
+                           <span>📧 {email}</span>
+                           <button 
+                             onClick={() => {
+                               if (email === 'admin@quizmaster.com') return;
+                               setEmailWhitelist(prev => prev.filter(x => x !== email));
+                               showToast(`Đã tháo quyền email ${email}!`, 'info');
+                             }}
+                             className="text-rose-600 text-[10px]"
+                           >
+                             Thu hồi
+                           </button>
+                         </div>
+                       ))}
+                     </div>
+                   </div>
+                 </div>
+               )}
+                 </>
+               )}
+             </div>
+           )}
 
-          {/* VIEW: EXAM PLAY ROOM (Thực luyện thi đấu thực tế) */}
-          {currentView === 'exam-room' && activeExam && (
-            <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
-              
-              <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="text-left space-y-0.5">
-                  <span className="bg-indigo-50 text-indigo-700 text-[9px] font-black px-2.5 py-0.5 rounded uppercase tracking-wider font-display">TRẬN ĐẤU CĂNG THẲNG LỚP {activeExam.grade}</span>
-                  <h2 className="text-base font-black text-slate-900 leading-tight mt-1">{activeExam.title}</h2>
-                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Học trình câu {activeExam.currentIdx + 1} / {activeExam.questionsList.length}</p>
-                </div>
-                <div className="bg-slate-950 text-white font-mono text-base font-black px-4.5 py-2 rounded-xl flex items-center gap-1.5 shrink-0">
-                  <Clock className="w-4 h-4 text-orange-400 animate-spin" /> {Math.floor(activeExam.timeLeft / 60).toString().padStart(2, '0')}:{(activeExam.timeLeft % 60).toString().padStart(2, '0')}
-                </div>
-              </div>
+           {/* VIEW: EXAM PLAY ROOM (Thực luyện thi đấu thực tế) */}
+           {currentView === 'exam-room' && activeExam && (
+             <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+               
+               <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+                 <div className="text-left space-y-0.5">
+                   <span className="bg-indigo-50 text-indigo-700 text-[9px] font-black px-2.5 py-0.5 rounded uppercase tracking-wider font-display">TRẬN ĐẤU CĂNG THẲNG LỚP {activeExam.grade}</span>
+                   <h2 className="text-base font-black text-slate-900 leading-tight mt-1">{activeExam.title}</h2>
+                   <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Học trình câu {activeExam.currentIdx + 1} / {activeExam.questionsList.length}</p>
+                 </div>
+                 <div className="bg-slate-950 text-white font-mono text-base font-black px-4.5 py-2 rounded-xl flex items-center gap-1.5 shrink-0">
+                   <Clock className="w-4 h-4 text-orange-400 animate-spin" /> {Math.floor(activeExam.timeLeft / 60).toString().padStart(2, '0')}:{(activeExam.timeLeft % 60).toString().padStart(2, '0')}
+                 </div>
+               </div>
 
-              {/* Dynamic question wrapper */}
-              <div className="bg-white p-6 rounded-2xl border border-slate-150 shadow-md space-y-6">
-                
-                <div className="flex justify-between items-center text-[10px] font-black text-indigo-600 uppercase tracking-widest border-b pb-2 border-slate-100">
-                  <span>MÃ PHÒNG CHỐNG GIAN LẬN: SECURE_WAF_K{activeExam.grade}</span>
-                  <button 
-                    type="button" 
-                    onClick={() => handleSpeakText(activeExam.questionsList[activeExam.currentIdx].content)}
-                    className="flex items-center gap-1 hover:underline text-orange-600"
-                  >
-                    <Volume2 className="w-3.5 h-3.5" /> Thuyết minh AI
-                  </button>
-                </div>
+               {/* Dynamic question wrapper */}
+               <div className="bg-white p-6 rounded-2xl border border-slate-150 shadow-md space-y-6">
+                 
+                 <div className="flex justify-between items-center text-[10px] font-black text-indigo-600 uppercase tracking-widest border-b pb-2 border-slate-100">
+                   <span>MÃ PHÒNG CHỐNG GIAN LẬN: SECURE_WAF_K{activeExam.grade}</span>
+                   <button 
+                     type="button" 
+                     onClick={() => handleSpeakText(activeExam.questionsList[activeExam.currentIdx].content)}
+                     className="flex items-center gap-1 hover:underline text-orange-600"
+                   >
+                     <Volume2 className="w-3.5 h-3.5" /> Thuyết minh AI
+                   </button>
+                 </div>
 
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-relaxed flex-1">
-                      Câu hỏi {activeExam.currentIdx + 1}: {activeExam.questionsList[activeExam.currentIdx].content}
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadPdf()}
-                      className="flex items-center gap-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-extrabold text-[11px] px-3 py-1.5 rounded-lg active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-red-600 animate-pulse" /> Tải đề PDF
-                    </button>
-                  </div>
+                 <div className="space-y-4">
+                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                     <h3 className="text-sm sm:text-base font-extrabold text-slate-900 leading-relaxed flex-1">
+                       Câu hỏi {activeExam.currentIdx + 1}: {activeExam.questionsList[activeExam.currentIdx].content}
+                     </h3>
+                     <button
+                       type="button"
+                       onClick={() => handleDownloadPdf()}
+                       className="flex items-center gap-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-extrabold text-[11px] px-3 py-1.5 rounded-lg active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm"
+                     >
+                       <FileText className="w-3.5 h-3.5 text-red-600 animate-pulse" /> Tải đề PDF
+                     </button>
+                   </div>
 
-                  {/* Question Type: TRUE FALSE */}
-                  {activeExam.questionsList[activeExam.currentIdx].type === 'TRUE FALSE' ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                   {/* Question Type: TRUE FALSE */}
+                   {activeExam.questionsList[activeExam.currentIdx].type === 'TRUE FALSE' ? (
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                       {[
                         { val: 0, text: 'ĐÚNG (Chính xác)', color: 'bg-emerald-50 border-emerald-500 text-emerald-950', hover: 'hover:bg-emerald-100' },
                         { val: 1, text: 'SAI (Chưa chính xác)', color: 'bg-rose-50 border-rose-500 text-rose-950', hover: 'hover:bg-rose-100' }
@@ -4105,6 +4173,46 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                           </button>
                         );
                       })}
+                    </div>
+                  ) : activeExam.questionsList[activeExam.currentIdx].type === 'SHORT_ANSWER' ? (
+                    /* Question Type: SHORT_ANSWER */
+                    <div className="space-y-3 pt-2">
+                      <div className="p-3 bg-amber-50/80 border border-amber-200 text-[10.5px] text-amber-800 font-extrabold uppercase rounded-xl flex items-center gap-1.5 shadow-sm">
+                        <FileText className="w-4 h-4 text-amber-600" /> Dạng TRẢ LỜI NGẮN. Hãy nhập đáp án chính xác của bạn vào ô dưới đây:
+                      </div>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={activeExam.answers[activeExam.currentIdx] || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setActiveExam(prev => ({
+                              ...prev,
+                              answers: { ...prev.answers, [prev.currentIdx]: val }
+                            }));
+                          }}
+                          placeholder="Điền từ khóa, mốc lịch sử, tên địa lý hoặc con số tại đây..."
+                          className="w-full p-4 pr-12 border-2 border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-550 rounded-2xl bg-white text-slate-800 font-bold text-sm shadow-sm transition-all focus:shadow-md outline-none"
+                        />
+                        {activeExam.answers[activeExam.currentIdx] && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActiveExam(prev => ({
+                                ...prev,
+                                answers: { ...prev.answers, [prev.currentIdx]: '' }
+                              }));
+                            }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-sm p-1.5 font-sans"
+                            title="Xóa nhanh đáp án"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-black uppercase tracking-wider pl-1">
+                        Lưu ý: Hệ thống không phân biệt chữ hoa hay chữ thường khi đối soát đáp án của học sinh.
+                      </div>
                     </div>
                   ) : (
                     /* Question Type: SINGLE */

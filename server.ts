@@ -742,7 +742,6 @@ app.post("/api/exam-history-logs", async (req, res) => {
   res.json({ success: true, id: log.id });
 });
 
-
 // API ROUTES FOR GEMINI
 app.post("/api/generate-multiple-questions", async (req, res) => {
   try {
@@ -757,11 +756,16 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
       });
     }
 
-    // We will generate four types: SINGLE (Một đáp án), MULTIPLE (Nhiều đáp án), TRUE FALSE, SHORT_ANSWER.
-    // To get as close to 60 questions each as possible, we do parallel calls.
-    // Each call asks for up to 60 detailed, unique, high-quality questions on every detail of the document text.
-    
-    const generateType = async (type: 'SINGLE' | 'MULTIPLE' | 'TRUE FALSE' | 'SHORT_ANSWER', typeName: string, num: number) => {
+    const targetGradeDesc = grade ? `Dành riêng cho Khối lớp: "${grade}". Hãy gán thuộc tính "grade" là "${grade}" cho mọi câu hỏi.` : 'Phân bổ đều cho các khối lớp THCS: "6", "7", "8", và "9"';
+    const targetSubjectDesc = (subject && subject !== 'Tự động') ? `Dành riêng cho phân môn hoặc lĩnh vực kiến thức: "${subject}". Hãy gán thuộc tính "category" của mọi câu hỏi được sinh ra là "${subject}".` : 'Hãy tự động đánh giá phân biệt nội dung để gán "category" là "Lịch sử" hoặc "Địa lí" phù hợp nhất.';
+
+    const modelsToTry = [
+      "gemini-3.1-flash-lite",
+      "gemini-flash-latest",
+      "gemini-3.5-flash"
+    ];
+
+    const generateType = async (type: string, typeLabel: string, count: number): Promise<any[]> => {
       let formatSchema = "";
       if (type === 'SINGLE') {
         formatSchema = `{
@@ -776,7 +780,7 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
     { "text": "Phương án D", "link": "", "image": "" }
   ],
   "correctAnswer": 0,
-  "explanation": "Giải thích tại sao phương án được chọn là đúng nhằm mục đích học tập."
+  "explanation": "Giải thích chi tiết trực quan"
 }`;
       } else if (type === 'MULTIPLE') {
         formatSchema = `{
@@ -790,12 +794,12 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
     { "text": "Phương án đúng thứ hai", "link": "", "image": "" },
     { "text": "Phương án sai khác", "link": "", "image": "" }
   ],
-  "correctAnswer": [0, 2], // Mảng chứa các index số nguyên của các đáp án đúng của câu hỏi này (ví dụ: [0, 2], [0, 1, 3]...)
-  "explanation": "Giải thích chi tiết tại sao các phương án được lựa chọn này là chính xác hoàn toàn."
+  "correctAnswer": [0, 2],
+  "explanation": "Giải thích tại sao các phương án đó đúng"
 }`;
       } else if (type === 'TRUE FALSE') {
         formatSchema = `{
-  "content": "Nhận định lịch sử hoặc địa lí cần học sinh xác định Đúng hay Sai",
+  "content": "Nhận định học sinh xác định Đúng / Sai",
   "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
   "type": "TRUE FALSE",
   "grade": "6" hoặc "7" hoặc "8" hoặc "9",
@@ -804,89 +808,146 @@ app.post("/api/generate-multiple-questions", async (req, res) => {
     { "text": "Sai", "link": "", "image": "" }
   ],
   "correctAnswer": 0,
-  "explanation": "Giải thích chi tiết tại sao nhận định này là Đúng hoặc Sai."
+  "explanation": "Giải thích chi tiết lý do"
 }`;
       } else if (type === 'SHORT_ANSWER') {
         formatSchema = `{
-  "content": "Câu hỏi yêu cầu câu trả lời ngắn dưới dạng một cụm từ, con số hoặc mốc lịch sử ngắn gọn",
+  "content": "Câu hỏi yêu cầu câu trả lời ngắn gọn",
   "category": "Lịch sử" hoặc "Địa lí" hoặc "Chung",
   "type": "SHORT_ANSWER",
   "grade": "6" hoặc "7" hoặc "8" hoặc "9",
   "options": [],
-  "correctAnswer": "Câu trả lời đúng ngắn gọn (ví dụ: '1945' hoặc 'Hồ Chí Minh')",
-  "explanation": "Giải thích ngắn gọn ý nghĩa thông tin câu trả lời."
+  "correctAnswer": "Câu trả lời đúng ngắn gọn",
+  "explanation": "Giải thích ngắn thông tin"
 }`;
       }
 
-      const targetGradeDesc = grade ? `Dành riêng cho Khối lớp: "${grade}". Hãy gán thuộc tính "grade" là "${grade}" cho mọi câu hỏi.` : 'Phân bổ đều cho các khối lớp THCS: "6", "7", "8", và "9"';
-      const targetSubjectDesc = (subject && subject !== 'Tự động') ? `Dành riêng cho phân môn hoặc lĩnh vực kiến thức: "${subject}". Hãy gán thuộc tính "category" của mọi câu hỏi được sinh ra là "${subject}".` : 'Hãy tự động đánh giá phân biệt nội dung để gán "category" là "Lịch sử" hoặc "Địa lí" phù hợp nhất.';
+      const systemPrompt = `Bạn là một chuyên gia khảo thí xuất sắc chuyên thiết kế đề thi môn Lịch sử và Địa lí cấp THCS.
+Nhiệm vụ: Hãy nghiên cứu kỹ văn bản tài liệu được cung cấp, sau đó soạn thảo và sinh ra danh sách gồm đúng ${count} câu hỏi cực kỳ chất lượng của loại: [${typeLabel}], bám sát từng sự kiện, địa danh, mốc thời gian, số liệu có trong văn bản.
 
-      const systemPrompt = `Bạn là một chuyên gia khảo thí thiết kế đề thi môn Lịch sử và Địa lí xuất sắc cấp THCS.
-Nhiệm vụ: Hãy nghiên cứu kỹ văn bản tài liệu học tập được cung cấp, sau đó soạn thảo và sinh ra danh sách tối đa ${num} câu hỏi thuộc loại [${typeName}] cực kỳ chất lượng, bám sát từng sự kiện, địa danh, mốc thời gian, số liệu có trong văn bản.
-Khai thác triệt để: Hãy tạo ra số lượng câu hỏi nhiều nhất có thể (lên tới tối đa ${num} câu hỏi độc lập, không trùng lặp đối với loại câu hỏi này).
-Điểm nhấn mục tiêu khối học và phân môn:
+Thông tin phân loại:
 1. ${targetGradeDesc}
 2. ${targetSubjectDesc}
 
-Cấu trúc từng câu hỏi trong mảng JSON phải đúng 100% định dạng schema sau:
+Yêu cầu định dạng JSON của từng câu hỏi trong mảng:
+BẮT BUỘC sử dụng đúng schema thuộc tính:
 ${formatSchema}
 
-* Lưu ý đặc biệt:
-1. Khối lớp "grade" BẮT BUỘC chỉ được chọn một trong bốn giá trị chuỗi: "6", "7", "8", "9".${grade ? ` Ở câu hỏi này, bắt buộc gán cứng là "${grade}".` : ''}
-2. "correctAnswer" đối với loại SINGLE là index số nguyên của mảng options (bắt đầu từ 0). Đối với MULTIPLE là một MẢNG các chỉ số nguyên (ví dụ: [0, 2] hoặc [1, 2, 3]). Đối với TRUE FALSE là 0 (Đúng) hoặc 1 (Sai). Đối với SHORT_ANSWER là một chuỗi văn bản (string) chính xác tuyệt đối.
-3. Với loại "TRUE FALSE", chỉ cần cung cấp đúng 2 options: [{"text": "Đúng", "link": "", "image": ""}, {"text": "Sai", "link": "", "image": ""}] và "correctAnswer" là 0 hoặc 1.
-4. Nghiêm cấm trả về bất kỳ văn bản giải thích phụ nào ở ngoài, không bọc JSON trong khối dấu nháy ngược \`\`\`json. Hãy trả về trực tiếp một mảng JSON hợp lệ chứa các câu hỏi dạng: [ ... ].`;
+Lưu ý đặc biệt:
+- Phải cố gắng lấy ra đúng và đủ ${count} câu hỏi khác nhau của loại [${typeLabel}] từ tài liệu đã cho. Nếu nội dung tài liệu ngắn, bạn hãy mở rộng, bổ sung thêm kiến thức lịch sử địa lí liên quan để cho đủ ${count} câu hỏi.
+- Chỉ trả về duy nhất mảng JSON của mảng các câu hỏi loại này. Không giải thích dông dài ngoài mảng JSON. Hãy trả về trực tiếp dạng: [ ... ].`;
 
-      try {
-        const response = await ai.models.generateContent({
-          model: "gemini-3.5-flash",
-          contents: prompt,
-          config: {
-            systemInstruction: systemPrompt,
-            responseMimeType: "application/json",
-          },
-        });
+      let lastError = null;
+      for (const modelName of modelsToTry) {
+        try {
+          console.log(`[Multi Gen - ${type}] Attempting with model: ${modelName}`);
+          const response = await ai.models.generateContent({
+            model: modelName,
+            contents: prompt,
+            config: {
+              systemInstruction: systemPrompt,
+              responseMimeType: "application/json",
+            },
+          });
 
-        let text = response.text || "";
-        text = text.trim();
-        if (text.startsWith("```")) {
-          const firstNewline = text.indexOf("\n");
-          if (firstNewline !== -1) {
-            text = text.substring(firstNewline + 1);
-          } else {
-            text = text.substring(3);
+          if (response && response.text) {
+            let text = response.text.trim();
+            if (text.startsWith("```")) {
+              const firstNewline = text.indexOf("\n");
+              if (firstNewline !== -1) {
+                text = text.substring(firstNewline + 1);
+              } else {
+                text = text.substring(3);
+              }
+              if (text.endsWith("```")) {
+                text = text.substring(0, text.length - 3);
+              }
+              text = text.trim();
+            }
+
+            const parsed = JSON.parse(text);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              console.log(`[Multi Gen - ${type}] Successfully generated ${parsed.length} questions with model ${modelName}`);
+              return parsed;
+            }
           }
-          if (text.endsWith("```")) {
-            text = text.substring(0, text.length - 3);
-          }
-          text = text.trim();
+        } catch (err: any) {
+          console.error(`[Multi Gen - ${type}] Error with model ${modelName}:`, err.message || err);
+          lastError = err;
         }
-        const parsed = JSON.parse(text);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
-        console.error(`Error generating ${type}:`, e);
-        return [];
       }
+      console.warn(`[Multi Gen - ${type}] Failed to generate questions for this category.`);
+      return [];
     };
 
-    // Parallel calls for outstanding volume and variety of types
-    const [singleQs, multipleQs, trueFalseQs, shortQs] = await Promise.all([
-      generateType('SINGLE', 'Trắc nghiệm một lựa chọn (SINGLE)', 60),
-      generateType('MULTIPLE', 'Trắc nghiệm nhiều lựa chọn (MULTIPLE)', 60),
-      generateType('TRUE FALSE', 'Đúng / Sai (TRUE FALSE)', 60),
-      generateType('SHORT_ANSWER', 'Trả lời ngắn (SHORT_ANSWER)', 60)
-    ]);
+    const generateTypeInBatches = async (type: string, typeLabel: string, totalNeeded: number, batchSize: number): Promise<any[]> => {
+      const results: any[] = [];
+      const startTime = Date.now();
+      const maxDuration = 45000; // max 45 seconds total execution time to avoid proxy timeout
+      
+      const numBatches = Math.ceil(totalNeeded / batchSize);
+      console.log(`[Batch Gen - ${type}] Total needed: ${totalNeeded}, Batch size: ${batchSize}, Total batches: ${numBatches}`);
+      
+      for (let i = 0; i < numBatches; i += 3) {
+        if (Date.now() - startTime > maxDuration) {
+          console.warn(`[Batch Gen - ${type}] Stopping because we reached the maximum duration fallback.`);
+          break;
+        }
 
-    const combined = [...singleQs, ...multipleQs, ...trueFalseQs, ...shortQs];
+        const remaining = totalNeeded - results.length;
+        if (remaining <= 0) break;
 
-    if (combined.length === 0) {
-      return res.status(500).json({ error: "Không thể trích xuất câu hỏi từ tài liệu đã cung cấp. Vui lòng kiểm tra lại nội dung tệp." });
+        const currentBatchGroupPromises = [];
+        for (let b = 0; b < 3; b++) {
+          const batchIdx = i + b;
+          if (batchIdx >= numBatches) break;
+          
+          const currentBatchSize = Math.min(batchSize, totalNeeded - results.length - (currentBatchGroupPromises.length * batchSize));
+          if (currentBatchSize <= 0) break;
+
+          currentBatchGroupPromises.push(generateType(type, typeLabel, currentBatchSize));
+        }
+
+        if (currentBatchGroupPromises.length === 0) break;
+
+        const batchResults = await Promise.all(currentBatchGroupPromises);
+        let addedInThisGroup = 0;
+        for (const list of batchResults) {
+          if (Array.isArray(list) && list.length > 0) {
+            results.push(...list);
+            addedInThisGroup += list.length;
+          }
+        }
+        console.log(`[Batch Gen - ${type}] Finished batch group ${Math.floor(i/3) + 1}. Added: ${addedInThisGroup}. Currently collected: ${results.length}/${totalNeeded}`);
+
+        if (addedInThisGroup === 0) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+
+      return results;
+    };
+
+    console.log("[Generate] Starting batch-guided question generation for 30 SINGLE, 30 MULTIPLE, 30 TRUE FALSE, 30 SHORT ANSWER");
+    
+    const singleQs = await generateTypeInBatches('SINGLE', 'Trắc nghiệm một lựa chọn (SINGLE)', 30, 30);
+    const multipleQs = await generateTypeInBatches('MULTIPLE', 'Trắc nghiệm nhiều lựa chọn (MULTIPLE)', 30, 30);
+    const trueFalseQs = await generateTypeInBatches('TRUE FALSE', 'Hỏi Đúng Sai (TRUE FALSE)', 30, 30);
+    const shortQs = await generateTypeInBatches('SHORT_ANSWER', 'Trả lời ngắn (SHORT_ANSWER)', 30, 30);
+
+    const questionsList = [...singleQs, ...multipleQs, ...trueFalseQs, ...shortQs];
+
+    if (questionsList.length === 0) {
+      return res.status(500).json({ error: "Không thể kết nối máy chủ AI hoặc vượt quá giới hạn cuộc gọi. Vui lòng thử lại với một tài liệu ngắn hơn hoặc đợi một lát." });
     }
 
-    res.json({ success: true, questions: combined });
+    console.log(`[Generate] Done generating. Total questions collected: ${questionsList.length}`);
+    res.json({ success: true, questions: questionsList });
   } catch (err: any) {
     console.error("Gemini Generate Multiple Questions Error:", err);
-    res.status(500).json({ error: err.message || "Lỗi tự động phân phối câu hỏi từ Gemini AI" });
+    res.status(500).json({ error: err.message || "Lỗi khi tự động phân phối và tạo câu hỏi từ hệ thống AI" });
   }
 });
 
@@ -922,17 +983,40 @@ Nghiêm cấm trả về định dạng markdown hay văn bản thô bên ngoài
 
 Hãy tự quyết định câu hỏi thuộc môn Lịch sử hay Địa lí tùy theo nội dung văn bản. "correctAnswer" là chỉ số nguyên (0, 1, 2, hoặc 3) của phương án đúng trong mảng options. Trả về đúng JSON thô.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
-      },
-    });
+    let text = "";
+    let lastError = null;
+    const modelsToTry = [
+      "gemini-3.1-flash-lite",
+      "gemini-flash-latest",
+      "gemini-3.5-flash"
+    ];
 
-    let text = response.text || "";
-    text = text.trim();
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`[Single Gen] Attempting with model: ${modelName}`);
+        const responseVal = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            systemInstruction: systemPrompt,
+            responseMimeType: "application/json",
+          },
+        });
+        if (responseVal && responseVal.text) {
+          text = responseVal.text.trim();
+          console.log(`[Single Gen] Successfully generated question with model: ${modelName}`);
+          break;
+        }
+      } catch (err: any) {
+        console.error(`[Single Gen] Error with model ${modelName}:`, err.message || err);
+        lastError = err;
+      }
+    }
+
+    if (!text) {
+      return res.status(500).json({ error: lastError?.message || "Không thể kết nối máy chủ AI để sinh câu hỏi hiện tại." });
+    }
+
     if (text.startsWith("```")) {
       const firstNewline = text.indexOf("\n");
       if (firstNewline !== -1) {
@@ -970,7 +1054,9 @@ app.post("/api/parse-pdf", async (req, res) => {
     if (typeof base64Clean === "string" && base64Clean.includes("base64,")) {
       base64Clean = base64Clean.split("base64,")[1];
     }
-    base64Clean = base64Clean.trim();
+    // Remove any potential non-base64 characters (such as whitespaces, newlines, carriage returns, etc.)
+    // to strictly prevent the Gemini API from throwing a "Base64 decoding failed" error.
+    base64Clean = base64Clean.replace(/[^A-Za-z0-9\+\/=]/g, '');
 
     const pdfPart = {
       inlineData: {
@@ -984,9 +1070,9 @@ app.post("/api/parse-pdf", async (req, res) => {
     let response;
     let lastError = null;
     const modelsToTry = [
-      "gemini-3.5-flash",
       "gemini-3.1-flash-lite",
-      "gemini-flash-latest"
+      "gemini-flash-latest",
+      "gemini-3.5-flash"
     ];
 
     for (const modelName of modelsToTry) {
