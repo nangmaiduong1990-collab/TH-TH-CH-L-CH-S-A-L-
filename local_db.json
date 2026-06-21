@@ -1,0 +1,269 @@
+{
+  "questions": [
+    {
+      "id": "q1",
+      "content": "Theo Công ước Liên Hợp Quốc về Luật Biển năm 1982, vùng biển của nước ta bao gồm mấy bộ phận?",
+      "grade": "9",
+      "category": "OT1",
+      "stt": "1",
+      "type": "SINGLE",
+      "options": [
+        {
+          "text": "5 bộ phận (Nội thủy, Lãnh hải, Tiếp giáp lãnh hải, Đặc quyền kinh tế, Thềm lục địa)",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "3 bộ phận (Lãnh hải, Đặc quyền kinh tế, Thềm lục địa)",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "4 bộ phận (Nội thủy, Lãnh hải, Đặc quyền kinh tế, Thềm lục địa)",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "2 bộ phận (Lãnh hải và Thềm lục địa)",
+          "link": "",
+          "image": ""
+        }
+      ],
+      "correctAnswer": 0,
+      "explanation": "Theo Công ước Luật Biển 1982 và Luật Biển Việt Nam, vùng biển nước ta gồm 5 bộ phận: Nội thủy, Lãnh hải, Vùng tiếp giáp lãnh hải, Vùng đặc quyền kinh tế và Thềm lục địa."
+    },
+    {
+      "id": "q2",
+      "content": "Chiến dịch Điện Biên Phủ lịch sử năm 1954 kết thúc thắng lợi vào ngày tháng năm nào?",
+      "grade": "9",
+      "category": "OT2",
+      "stt": "2",
+      "type": "SINGLE",
+      "options": [
+        {
+          "text": "30/04/1975",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "07/05/1954",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "19/08/1945",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "02/09/1945",
+          "link": "",
+          "image": ""
+        }
+      ],
+      "correctAnswer": 1,
+      "explanation": "Chiều ngày 7/5/1954, lá cờ \"Quyết chiến Quyết thắng\" của quân đội ta tung bay trên nóc hầm Đờ Cát-tơ-ri, chiến dịch Điện Biên Phủ hoàn toàn thắng lợi."
+    },
+    {
+      "id": "q3",
+      "content": "Trái Đất tự quay quanh trục tưởng tượng theo hướng nào?",
+      "grade": "6",
+      "category": "OT1",
+      "stt": "1",
+      "type": "SINGLE",
+      "options": [
+        {
+          "text": "Từ Tây sang Đông",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "Từ Đông sang Tây",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "Từ Bắc xuống Nam",
+          "link": "",
+          "image": ""
+        },
+        {
+          "text": "Từ Nam lên Bắc",
+          "link": "",
+          "image": ""
+        }
+      ],
+      "correctAnswer": 0,
+      "explanation": "Trái Đất tự quay quanh trục tưởng tượng theo hướng từ Tây sang Đông."
+    }
+  ],
+  "leaderboard": [
+    {
+      "id": "l1",
+      "rank": 1,
+      "name": "NGUYỄN PHÚC VĂN ANH",
+      "class": "Lớp 9A1 - THCS Bình An",
+      "score": 1000,
+      "time": "2 phút 15 giây",
+      "date": "08/06/2026"
+    },
+    {
+      "id": "l2",
+      "rank": 2,
+      "name": "ĐẶNG THỊ MỸ DUYÊN",
+      "class": "Lớp 8A2 - THCS Nguyễn Du",
+      "score": 1005,
+      "time": "2 phút 45 giây",
+      "date": "08/06/2026"
+    }
+  ],
+  "examRooms": [
+    {
+      "id": "room0_sample_ot9",
+      "code": "OT9_D1_06_06",
+      "title": "Phòng Đấu Trường Khảo Thí Lịch Sử & Địa Lí 9 (Mẫu)",
+      "grade": "9",
+      "duration": 45,
+      "questions": 40,
+      "studentsCount": 24,
+      "status": "ĐANG THI"
+    },
+    {
+      "id": "97e11f08-b4a8-5a2e-896e-e6d3cc297d4d",
+      "code": "ROOM_0NTC",
+      "title": "phòng thi lịch sử địa lý 9",
+      "grade": "9",
+      "duration": 20,
+      "questions": 40,
+      "studentsCount": 0,
+      "status": "ĐANG CHỜ"
+    },
+    {
+      "id": "5aa8a42b-257a-5581-8e81-f7753ad6d7c7",
+      "code": "ROOM_056T",
+      "title": "lịch sử địa lý 9",
+      "grade": "9",
+      "duration": 20,
+      "questions": 40,
+      "studentsCount": 0,
+      "status": "ĐANG CHỜ"
+    },
+    {
+      "id": "cff75ed6-3882-5515-8788-b531428d4efe",
+      "code": "ROOM_63K3",
+      "title": "lịch sử 7",
+      "grade": "9",
+      "duration": 45,
+      "questions": 40,
+      "studentsCount": 0,
+      "status": "ĐANG CHỜ"
+    },
+    {
+      "id": "a9cc505f-e859-53fd-8019-da2f0a442168",
+      "code": "ROOM_BIJK",
+      "title": "khảo sát lịch sử 9",
+      "grade": "9",
+      "duration": 15,
+      "questions": 40,
+      "studentsCount": 0,
+      "status": "ĐANG CHỜ"
+    },
+    {
+      "id": "f343ee8d-6513-5f89-8c0d-d4279be64ac8",
+      "code": "ROOM_M8GE",
+      "title": "khảo sát lịch sử địa lý 9",
+      "grade": "9",
+      "duration": 15,
+      "questions": 40,
+      "studentsCount": 0,
+      "status": "ĐANG CHỜ"
+    },
+    {
+      "id": "room1",
+      "code": "OT4_D2_06_06",
+      "title": "Phòng Đấu Trường Lịch Sử Khối 6",
+      "grade": "6",
+      "duration": 45,
+      "questions": 15,
+      "studentsCount": 18,
+      "status": "ĐANG THI"
+    }
+  ],
+  "examHistoryLogs": [
+    {
+      "id": "h1",
+      "student": "LÊ VĂN KHÁNH",
+      "grade": "9",
+      "score": "950đ",
+      "duration": "22:15",
+      "date": "08/06/2026"
+    }
+  ],
+  "settings": {
+    "maintenanceMode": false,
+    "maintenanceTime": "BT",
+    "blockF12": true,
+    "grade6Time": 45,
+    "grade7Time": 45,
+    "grade8Time": 50,
+    "grade9Time": 50,
+    "removeDuplicateNames": false
+  },
+  "interactiveGames": [
+    {
+      "id": "g-timeline-6",
+      "code": "TIMELINE_G6",
+      "title": "Sắp xếp dòng lịch sử",
+      "description": "Sắp xếp các sự kiện lịch sử Ai Cập, Lưỡng Hà và thời kỳ dựng nước cổ xưa của dân tộc Việt Nam theo trình tự thời gian.",
+      "grade": "6",
+      "subject": "Lịch sử",
+      "moduleId": "TimelineGame",
+      "isSystem": true,
+      "createdAt": "2026-06-21T14:49:08.315Z"
+    },
+    {
+      "id": "g-map-7",
+      "code": "MAP_G7",
+      "title": "Bản đồ địa lý bí ẩn",
+      "description": "Nhận dạng các kỳ quan thiên nhiên, dòng sông vĩ đại và ghép nối chính xác vào châu lục tương ứng trên bản đồ thế giới.",
+      "grade": "7",
+      "subject": "Địa lí",
+      "moduleId": "MapWondersGame",
+      "isSystem": true,
+      "createdAt": "2026-06-21T14:49:08.316Z"
+    },
+    {
+      "id": "g-relic-8",
+      "code": "RELIC_G8",
+      "title": "Giải mã di sản Việt Nam",
+      "description": "Thử tài kết nối thông tin di sản, đền tháp và thương cảng lịch sử của Việt Nam qua các triều đại lịch sử.",
+      "grade": "8",
+      "subject": "Lịch sử",
+      "moduleId": "RelicMatchGame",
+      "isSystem": true,
+      "createdAt": "2026-06-21T14:49:08.316Z"
+    },
+    {
+      "id": "g-survival-9",
+      "code": "SURVIVAL_G9",
+      "title": "Chinh phục địa lý Việt Nam",
+      "description": "Điều khiển đoàn tàu thám hiểm vượt qua 5 vùng địa lý đặc trưng đất nước thông qua bộ câu hỏi tài nguyên thiên nhiên học kỳ lớp 9.",
+      "grade": "9",
+      "subject": "Địa lí",
+      "moduleId": "ClimateSurvivalGame",
+      "isSystem": true,
+      "createdAt": "2026-06-21T14:49:08.316Z"
+    },
+    {
+      "id": "g-trivia-all",
+      "code": "TRIVIA_G69",
+      "title": "Đấu trường trí tuệ tốc độ",
+      "description": "Chạy đua bấm giờ trả lời trắc nghiệm Lịch sử và Địa lý tổng hợp của các khối lớp THCS dưới áp lực thời gian dồn dập.",
+      "grade": "6-9",
+      "subject": "Tổng hợp",
+      "moduleId": "TriviaDuelGame",
+      "isSystem": true,
+      "createdAt": "2026-06-21T14:49:08.316Z"
+    }
+  ]
+}

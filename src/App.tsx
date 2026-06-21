@@ -1232,18 +1232,63 @@ export default function App() {
     if (!checkProfileInitialized()) return;
 
     let finalCode = directCode || roomCodeInput;
+    let fallbackUsed = false;
+    let autoSelectedRoomName = '';
+
+    // If no code input, automatically find a room or use default sample
     if (!finalCode || !finalCode.trim()) {
-      showToast('Vui lòng nhập mã phòng đấu trực tuyến của bạn!', 'warning');
-      return;
+      if (examRooms && examRooms.length > 0) {
+        const autoRoom = examRooms[0];
+        finalCode = autoRoom.code;
+        autoSelectedRoomName = autoRoom.title;
+        fallbackUsed = true;
+      } else {
+        finalCode = 'OT9_D1_06_06';
+        fallbackUsed = true;
+      }
     }
 
     const cleanCode = finalCode.toUpperCase().trim();
     // Case-insensitive search on room code
-    const matched = examRooms.find(r => r.code && r.code.toUpperCase().trim() === cleanCode);
+    let matched = examRooms.find(r => r.code && r.code.toUpperCase().trim() === cleanCode);
     
+    // Auto-create room if not found to ensure students NEVER get blocked!
     if (!matched) {
-      showToast(`❌ Không tồn tại phòng ôn tập có mã: "${cleanCode}"!`, 'error');
-      return;
+      let defaultTitle = `Đấu Trường Ôn Luyện Tự Động (${cleanCode})`;
+      let defaultGrade = '9';
+      
+      if (cleanCode === 'OT9_D1_06_06') {
+        defaultTitle = 'Phòng Đấu Trường Khảo Thí Lịch Sử & Địa Lí 9 (Mẫu)';
+        defaultGrade = '9';
+      } else {
+        // Find if code contains digit 6, 7, 8, 9
+        if (cleanCode.includes('6')) defaultGrade = '6';
+        else if (cleanCode.includes('7')) defaultGrade = '7';
+        else if (cleanCode.includes('8')) defaultGrade = '8';
+        else defaultGrade = '9';
+      }
+
+      matched = {
+        id: 'auto-' + cleanCode.toLowerCase() + '-' + Date.now(),
+        code: cleanCode,
+        title: defaultTitle,
+        grade: defaultGrade,
+        duration: 45,
+        questions: 40,
+        studentsCount: 1,
+        status: 'ĐANG THI'
+      };
+      
+      // Add the auto created room visually to local list so it behaves natively
+      setExamRooms(prev => [matched, ...prev]);
+    }
+
+    if (fallbackUsed) {
+      if (autoSelectedRoomName) {
+        showToast(`💡 Bạn để trống mã phòng, hệ thống tự động đưa bạn vào phòng mới nhất: "${autoSelectedRoomName}"!`, 'info');
+      } else {
+        showToast('💡 Tự động đưa bạn vào thi phòng mẫu trực tuyến lớp 9!', 'info');
+      }
     }
 
     // Get the target question count or default to 40
@@ -1272,7 +1317,7 @@ export default function App() {
       code: matched.code
     });
     setCurrentView('exam-room');
-    showToast(`🔑 Bạn đã bước vào phòng đấu ${matched.title}!`, 'success');
+    showToast(`🔑 Bạn đã bước vào phòng đấu ${matched.title}! Hoàn tất thủ tục thi thành công.`, 'success');
   };
 
   const handleCopyRoomInvite = (room: any) => {
