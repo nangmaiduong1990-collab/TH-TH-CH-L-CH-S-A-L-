@@ -61,119 +61,11 @@ const extractPdfTextClientSide = async (file: File): Promise<string> => {
   });
 };
 
-const INITIAL_QUESTIONS = [
-  {
-    id: 'q1',
-    content: 'Theo Công ước Liên Hợp Quốc về Luật Biển năm 1982, vùng biển của nước ta bao gồm mấy bộ phận?',
-    grade: '9',
-    category: 'OT1',
-    stt: '1',
-    type: 'SINGLE',
-    options: [
-      { text: '5 bộ phận (Nội thủy, Lãnh hải, Tiếp giáp lãnh hải, Đặc quyền kinh tế, Thềm lục địa)', link: '', image: '' },
-      { text: '3 bộ phận (Lãnh hải, Đặc quyền kinh tế, Thềm lục địa)', link: '', image: '' },
-      { text: '4 bộ phận (Nội thủy, Lãnh hải, Đặc quyền kinh tế, Thềm lục địa)', link: '', image: '' },
-      { text: '2 bộ phận (Lãnh hải và Thềm lục địa)', link: '', image: '' }
-    ],
-    correctAnswer: 0,
-    explanation: 'Theo Công ước Luật Biển 1982 và Luật Biển Việt Nam, vùng biển nước ta gồm 5 bộ phận: Nội thủy, Lãnh hải, Vùng tiếp giáp lãnh hải, Vùng đặc quyền kinh tế và Thềm lục địa.'
-  },
-  {
-    id: 'q2',
-    content: 'Chiến dịch Điện Biên Phủ lịch sử năm 1954 kết thúc thắng lợi vào ngày tháng năm nào?',
-    grade: '9',
-    category: 'OT2',
-    stt: '2',
-    type: 'SINGLE',
-    options: [
-      { text: '30/04/1975', link: '', image: '' },
-      { text: '07/05/1954', link: '', image: '' },
-      { text: '19/08/1945', link: '', image: '' },
-      { text: '02/09/1945', link: '', image: '' }
-    ],
-    correctAnswer: 1,
-    explanation: 'Chiều ngày 7/5/1954, lá cờ "Quyết chiến Quyết thắng" của quân đội ta tung bay trên nóc hầm Đờ Cát-tơ-ri, chiến dịch Điện Biên Phủ hoàn toàn thắng lợi.'
-  },
-  {
-    id: 'q3',
-    content: 'Trái Đất tự quay quanh trục tưởng tượng theo hướng nào?',
-    grade: '6',
-    category: 'OT1',
-    stt: '1',
-    type: 'SINGLE',
-    options: [
-      { text: 'Từ Tây sang Đông', link: '', image: '' },
-      { text: 'Từ Đông sang Tây', link: '', image: '' },
-      { text: 'Từ Bắc xuống Nam', link: '', image: '' },
-      { text: 'Từ Nam lên Bắc', link: '', image: '' }
-    ],
-    correctAnswer: 0,
-    explanation: 'Trái Đất tự quay quanh trục tưởng tượng theo hướng từ Tây sang Đông.'
-  },
-  {
-    id: 'q4',
-    content: 'Vào khoảng thiên niên kỷ thứ III TCN, cư dân Ai Cập cổ đại đã viết chữ trên loại giấy làm từ nguyên liệu gì?',
-    grade: '6',
-    category: 'OT3',
-    stt: '2',
-    type: 'SINGLE',
-    options: [
-      { text: 'Cây lúa mạch', link: '', image: '' },
-      { text: 'Cây pa-pi-rút (Papyrus)', link: '', image: '' },
-      { text: 'Mai rùa và xương thú', link: '', image: '' },
-      { text: 'Thanh tre và lá cọ', link: '', image: '' }
-    ],
-    correctAnswer: 1,
-    explanation: 'Người Ai Cập cổ đại đã biết dùng thân cây pa-pi-rút mọc ven sông Nin để làm thành một loại giấy viết đặc biệt.'
-  },
-  {
-    id: 'q5',
-    content: 'Châu lục nào trên thế giới có diện tích lớn nhất và dân số đông nhất hiện nay?',
-    grade: '7',
-    category: 'OT1',
-    stt: '1',
-    type: 'SINGLE',
-    options: [
-      { text: 'Châu Âu', link: '', image: '' },
-      { text: 'Châu Á', link: '', image: '' },
-      { text: 'Châu Phi', link: '', image: '' },
-      { text: 'Châu Mỹ', link: '', image: '' }
-    ],
-    correctAnswer: 1,
-    explanation: 'Châu Á là châu lục có diện tích lớn nhất (khoảng 44.4 triệu km2 bao gồm cả các đảo) và có quy mô dân số đông nhất thế giới.'
-  },
-  {
-    id: 'q6',
-    content: 'Phong trào Cần Vương bùng nổ sau sự kiện lịch sử tiêu biểu nào vào năm 1885?',
-    grade: '8',
-    category: 'OT1',
-    stt: '1',
-    type: 'SINGLE',
-    options: [
-      { text: 'Cuộc phản công quân Pháp tại kinh thành Huế của phái chủ chiến', link: '', image: '' },
-      { text: 'Thực dân Pháp tấn công vào cửa biển Đà Nẵng', link: '', image: '' },
-      { text: 'Hiệp ước Pa-tơ-nốt được ký kết', link: '', image: '' },
-      { text: 'Khởi nghĩa Yên Thế bùng nổ', link: '', image: '' }
-    ],
-    correctAnswer: 0,
-    explanation: 'Sau thất bại của cuộc phản công tại kinh thành Huế đêm mùng 4 rạng sáng mùng 5/7/1885, Tôn Thất Thuyết đưa vua Hàm Nghi ra Tân Sở (Quảng Trị) và hạ chiếu Cần Vương.'
-  }
-];
+const INITIAL_QUESTIONS = [];
 
-const INITIAL_LEADERBOARD = [
-  { id: 'l1', rank: 1, name: 'NGUYỄN PHÚC VĂN ANH', class: 'Lớp 9A1 - THCS Bình An', score: 1000, time: '2 phút 15 giây', date: '08/06/2026' },
-  { id: 'l2', rank: 2, name: 'ĐẶNG THỊ MỸ DUYÊN', class: 'Lớp 8A2 - THCS Nguyễn Du', score: 1005, time: '2 phút 45 giây', date: '08/06/2026' },
-  { id: 'l3', rank: 3, name: 'NGUYỄN PHÚC VÂN', class: 'Lớp 7B3 - THCS Trưng Vương', score: 980, time: '3 phút 02 giây', date: '07/06/2026' },
-  { id: 'l4', rank: 4, name: 'Phạm Gia Bảo', class: 'Lớp 6A2 - THCS Nguyễn Du', score: 950, time: '3 phút 40 giây', date: '08/06/2026' },
-  { id: 'l5', rank: 5, name: 'Bùi Xuân Yến', class: 'Lớp 9A5 - THCS Bình An', score: 920, time: '4 phút 10 giây', date: '08/06/2026' },
-  { id: 'l6', rank: 6, name: 'Anh Khoa', class: 'Lớp 8A1 - THCS Trưng Vương', score: 890, time: '4 phút 55 giây', date: '06/06/2026' },
-];
+const INITIAL_LEADERBOARD = [];
 
-const INITIAL_EXAM_ROOMS = [
-  { id: 'room1', code: 'OT4_D2_06_06', title: 'Phòng Đấu Trường Lịch Sử Khối 6', grade: '6', duration: 45, questions: 45, studentsCount: 18, status: 'ĐANG THI' },
-  { id: 'room2', code: 'OT6_D2_06_06', title: 'Phòng Đấu Trường Địa Lí Khối 8', grade: '8', duration: 50, questions: 45, studentsCount: 24, status: 'ĐANG THI' },
-  { id: 'room3', code: 'OT9_D1_06_06', title: 'Đấu Trường Lịch Sử & Địa Lí Khối 9', grade: '9', duration: 45, questions: 40, studentsCount: 31, status: 'ĐANG THI' }
-];
+const INITIAL_EXAM_ROOMS = [];
 
 const MOST_DOWNLOADED_RESOURCES = [
   { id: 'res1_t1', title: 'Đề Cương Học Và Kiến Thức Lịch Sử & Địa Lí Khối 6', grade: '6', category: 'OT1', questions: 40, downloads: 1250, color: 'border-orange-500', svgType: 'history' },
@@ -210,11 +102,7 @@ export default function App() {
 
   const [examHistoryLogs, setExamHistoryLogs] = useState(() => {
     const local = localStorage.getItem('quizmaster_history_logs');
-    return local ? JSON.parse(local) : [
-      { id: 'h1', student: 'LÊ VĂN KHÁNH', grade: '9', score: '950đ', duration: '22:15', date: '08/06/2026' },
-      { id: 'h2', student: 'TRẦN LÊ ANH THƯ', grade: '8', score: '880đ', duration: '18:40', date: '08/06/2026' },
-      { id: 'h3', student: 'VƯƠNG TUẤN KIỆT', grade: '7', score: '1000đ', duration: '15:10', date: '07/06/2026' }
-    ];
+    return local ? JSON.parse(local) : [];
   });
 
   const [userData, setUserData] = useState(() => {
@@ -509,22 +397,24 @@ export default function App() {
       const localQList = localQStr ? JSON.parse(localQStr) : [];
 
       if (isConnected) {
-        // Intelligent Sync for Questions: Find local questions that aren't on the server yet
-        const serverIds = new Set(serverQuestions.map((q: any) => q.id));
-        const questionsToUpload = localQList.filter((q: any) => q && q.id && !serverIds.has(q.id));
+        if (isAdminLoggedIn) {
+          // Intelligent Sync for Questions: Find local questions that aren't on the server yet
+          const serverIds = new Set(serverQuestions.map((q: any) => q.id));
+          const questionsToUpload = localQList.filter((q: any) => q && q.id && !serverIds.has(q.id));
 
-        if (questionsToUpload.length > 0) {
-          showToast(`🚀 Phát hiện ${questionsToUpload.length} câu hỏi mới tại thiết bị. Đang tự động đẩy lên Supabase...`, 'info');
-          const syncRes = await fetch('/api/questions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(questionsToUpload)
-          });
-          if (syncRes.ok) {
-            showToast(`🎉 Đã tự động đồng bộ thành công ${questionsToUpload.length} câu hỏi lên Supabase!`, 'success');
-            const qFreshRes = await fetch('/api/questions');
-            if (qFreshRes.ok) {
-              serverQuestions = await qFreshRes.json();
+          if (questionsToUpload.length > 0) {
+            showToast(`🚀 Phát hiện ${questionsToUpload.length} câu hỏi mới tại thiết bị. Đang tự động đẩy lên Supabase...`, 'info');
+            const syncRes = await fetch('/api/questions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(questionsToUpload)
+            });
+            if (syncRes.ok) {
+              showToast(`🎉 Đã tự động đồng bộ thành công ${questionsToUpload.length} câu hỏi lên Supabase!`, 'success');
+              const qFreshRes = await fetch('/api/questions');
+              if (qFreshRes.ok) {
+                serverQuestions = await qFreshRes.json();
+              }
             }
           }
         }
@@ -588,23 +478,25 @@ export default function App() {
       const localRooms = localRStr ? JSON.parse(localRStr) : [];
 
       if (isConnected) {
-        const serverRoomIds = new Set(serverRooms.map((r: any) => r.id));
-        const roomsToUpload = localRooms.filter((r: any) => r && r.id && !serverRoomIds.has(r.id));
+        if (isAdminLoggedIn) {
+          const serverRoomIds = new Set(serverRooms.map((r: any) => r.id));
+          const roomsToUpload = localRooms.filter((r: any) => r && r.id && !serverRoomIds.has(r.id));
 
-        if (roomsToUpload.length > 0) {
-          showToast(`🚀 Đồng bộ ${roomsToUpload.length} phòng thi lên Supabase...`, 'info');
-          for (const room of roomsToUpload) {
-            await fetch('/api/exam-rooms', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(room)
-            });
+          if (roomsToUpload.length > 0) {
+            showToast(`🚀 Đồng bộ ${roomsToUpload.length} phòng thi lên Supabase...`, 'info');
+            for (const room of roomsToUpload) {
+              await fetch('/api/exam-rooms', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(room)
+              });
+            }
+            const freshRRes = await fetch('/api/exam-rooms');
+            if (freshRRes.ok) {
+              serverRooms = await freshRRes.json();
+            }
+            showToast(`🎉 Đồng bộ phòng thi thành công!`, 'success');
           }
-          const freshRRes = await fetch('/api/exam-rooms');
-          if (freshRRes.ok) {
-            serverRooms = await freshRRes.json();
-          }
-          showToast(`🎉 Đồng bộ phòng thi thành công!`, 'success');
         }
         setExamRooms(serverRooms);
         localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(serverRooms));

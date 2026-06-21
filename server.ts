@@ -27,70 +27,13 @@ const ai = new GoogleGenAI({
 const LOCAL_DB_PATH = path.join(process.cwd(), "local_db.json");
 
 // Default initial mock data
-const DEFAULT_QUESTIONS = [
-  {
-    id: 'q1',
-    content: 'Theo Công ước Liên Hợp Quốc về Luật Biển năm 1982, vùng biển của nước ta bao gồm mấy bộ phận?',
-    grade: '9',
-    category: 'OT1',
-    stt: '1',
-    type: 'SINGLE',
-    options: [
-      { text: '5 bộ phận (Nội thủy, Lãnh hải, Tiếp giáp lãnh hải, Đặc quyền kinh tế, Thềm lục địa)', link: '', image: '' },
-      { text: '3 bộ phận (Lãnh hải, Đặc quyền kinh tế, Thềm lục địa)', link: '', image: '' },
-      { text: '4 bộ phận (Nội thủy, Lãnh hải, Đặc quyền kinh tế, Thềm lục địa)', link: '', image: '' },
-      { text: '2 bộ phận (Lãnh hải và Thềm lục địa)', link: '', image: '' }
-    ],
-    correctAnswer: 0,
-    explanation: 'Theo Công ước Luật Biển 1982 và Luật Biển Việt Nam, vùng biển nước ta gồm 5 bộ phận: Nội thủy, Lãnh hải, Vùng tiếp giáp lãnh hải, Vùng đặc quyền kinh tế và Thềm lục địa.'
-  },
-  {
-    id: 'q2',
-    content: 'Chiến dịch Điện Biên Phủ lịch sử năm 1954 kết thúc thắng lợi vào ngày tháng năm nào?',
-    grade: '9',
-    category: 'OT2',
-    stt: '2',
-    type: 'SINGLE',
-    options: [
-      { text: '30/04/1975', link: '', image: '' },
-      { text: '07/05/1954', link: '', image: '' },
-      { text: '19/08/1945', link: '', image: '' },
-      { text: '02/09/1945', link: '', image: '' }
-    ],
-    correctAnswer: 1,
-    explanation: 'Chiều ngày 7/5/1954, lá cờ "Quyết chiến Quyết thắng" của quân đội ta tung bay trên nóc hầm Đờ Cát-tơ-ri, chiến dịch Điện Biên Phủ hoàn toàn thắng lợi.'
-  },
-  {
-    id: 'q3',
-    content: 'Trái Đất tự quay quanh trục tưởng tượng theo hướng nào?',
-    grade: '6',
-    category: 'OT1',
-    stt: '1',
-    type: 'SINGLE',
-    options: [
-      { text: 'Từ Tây sang Đông', link: '', image: '' },
-      { text: 'Từ Đông sang Tây', link: '', image: '' },
-      { text: 'Từ Bắc xuống Nam', link: '', image: '' },
-      { text: 'Từ Nam lên Bắc', link: '', image: '' }
-    ],
-    correctAnswer: 0,
-    explanation: 'Trái Đất tự quay quanh trục tưởng tượng theo hướng từ Tây sang Đông.'
-  }
-];
+const DEFAULT_QUESTIONS: any[] = [];
 
-const DEFAULT_LEADERBOARD = [
-  { id: 'l1', rank: 1, name: 'NGUYỄN PHÚC VĂN ANH', class: 'Lớp 9A1 - THCS Bình An', score: 1000, time: '2 phút 15 giây', date: '08/06/2026' },
-  { id: 'l2', rank: 2, name: 'ĐẶNG THỊ MỸ DUYÊN', class: 'Lớp 8A2 - THCS Nguyễn Du', score: 1005, time: '2 phút 45 giây', date: '08/06/2026' }
-];
+const DEFAULT_LEADERBOARD: any[] = [];
 
-const DEFAULT_EXAM_ROOMS = [
-  { id: 'room1', code: 'OT4_D2_06_06', title: 'Phòng Đấu Trường Lịch Sử Khối 6', grade: '6', duration: 45, questions: 15, studentsCount: 18, status: 'ĐANG THI' },
-  { id: 'room2', code: 'OT9_D1_06_06', title: 'Đấu Trường Lịch Sử & Địa Lí Khối 9', grade: '9', duration: 45, questions: 15, studentsCount: 31, status: 'ĐANG THI' }
-];
+const DEFAULT_EXAM_ROOMS: any[] = [];
 
-const DEFAULT_HISTORY_LOGS = [
-  { id: 'h1', student: 'LÊ VĂN KHÁNH', grade: '9', score: '950đ', duration: '22:15', date: '08/06/2026' }
-];
+const DEFAULT_HISTORY_LOGS: any[] = [];
 
 // Load local JSON DB
 function loadLocalDb() {
@@ -157,7 +100,7 @@ function mapQuestionToSupabase(q: any) {
     stt: q.stt,
     type: q.type || 'SINGLE',
     options: q.options,
-    correct_answer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+    correct_answer: q.correctAnswer !== undefined && q.correctAnswer !== null ? q.correctAnswer : 0,
     explanation: q.explanation
   };
 }
@@ -171,7 +114,7 @@ function mapQuestionFromSupabase(dbQ: any) {
     stt: dbQ.stt,
     type: dbQ.type || 'SINGLE',
     options: dbQ.options,
-    correctAnswer: typeof dbQ.correct_answer === 'number' ? dbQ.correct_answer : 0,
+    correctAnswer: dbQ.correct_answer !== undefined && dbQ.correct_answer !== null ? dbQ.correct_answer : 0,
     explanation: dbQ.explanation
   };
 }
@@ -258,7 +201,7 @@ CREATE TABLE IF NOT EXISTS questions (
     stt TEXT,
     type TEXT NOT NULL DEFAULT 'SINGLE',
     options JSONB NOT NULL,
-    "correctAnswer" INTEGER NOT NULL,
+    correct_answer JSONB NOT NULL,
     explanation TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -285,6 +228,8 @@ CREATE TABLE IF NOT EXISTS leaderboard (
 ALTER TABLE leaderboard ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public select on leaderboard" ON leaderboard FOR SELECT USING (true);
 CREATE POLICY "Allow public insert on leaderboard" ON leaderboard FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on leaderboard" ON leaderboard FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on leaderboard" ON leaderboard FOR DELETE USING (true);
 
 -- 3. Tạo bảng exam_rooms (Phòng thi đấu trực tuyến)
 CREATE TABLE IF NOT EXISTS exam_rooms (
@@ -303,6 +248,7 @@ ALTER TABLE exam_rooms ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public select on exam_rooms" ON exam_rooms FOR SELECT USING (true);
 CREATE POLICY "Allow public insert on exam_rooms" ON exam_rooms FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public update on exam_rooms" ON exam_rooms FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on exam_rooms" ON exam_rooms FOR DELETE USING (true);
 
 -- 4. Tạo bảng exam_history_logs (Nhật ký thi đấu)
 CREATE TABLE IF NOT EXISTS exam_history_logs (
@@ -317,7 +263,9 @@ CREATE TABLE IF NOT EXISTS exam_history_logs (
 
 ALTER TABLE exam_history_logs ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public select on exam_history_logs" ON exam_history_logs FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on exam_history_logs" ON exam_history_logs FOR INSERT WITH CHECK (true);`;
+CREATE POLICY "Allow public insert on exam_history_logs" ON exam_history_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update on exam_history_logs" ON exam_history_logs FOR UPDATE USING (true);
+CREATE POLICY "Allow public delete on exam_history_logs" ON exam_history_logs FOR DELETE USING (true);`;
 
 // ENDPOINTS - SUPABASE CONNECTION HEALTH CHECK
 app.get("/api/supabase/status", async (req, res) => {
