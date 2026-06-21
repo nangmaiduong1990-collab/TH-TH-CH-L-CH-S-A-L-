@@ -12,6 +12,19 @@ body {
   background-color: #f8fafc;
 }
 
+.premium-card {
+  background-color: #ffffff;
+  border-width: 2px;
+  border-color: #e2e8f0; /* slate-200 */
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.04), 0 8px 12px -6px rgba(0, 0, 0, 0.02);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.premium-card:hover {
+  border-color: #cbd5e1; /* slate-300 */
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08), 0 12px 20px -8px rgba(0, 0, 0, 0.04);
+}
+
 /* Custom fade-in and smooth scrollbar */
 .scrollbar-none::-webkit-scrollbar {
   display: none;

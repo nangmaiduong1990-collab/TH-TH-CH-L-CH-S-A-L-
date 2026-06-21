@@ -2535,7 +2535,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
         <aside className="w-full lg:w-64 shrink-0 flex flex-col space-y-6">
           
           {/* Student ID badge */}
-          <div className="bg-white rounded-2xl p-5 border border-slate-150 shadow-sm flex flex-col items-center text-center space-y-4">
+          <div className="premium-card rounded-2xl p-5 flex flex-col items-center text-center space-y-4">
             <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-inner">
               <User className="w-6 h-6" />
             </div>
@@ -2586,7 +2586,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
           </div>
 
           {/* Quick links block */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-150 shadow-sm space-y-1">
+          <div className="premium-card rounded-2xl p-4 space-y-1">
             <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest px-2.5 mb-2.5">LIÊN KẾT NHANH</span>
             <button 
               onClick={() => setCurrentView('portal')}
@@ -2609,7 +2609,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
           </div>
 
           {/* Grade filter fast button */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-150 shadow-sm space-y-1">
+          <div className="premium-card rounded-2xl p-4 space-y-1">
             <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest px-2.5 mb-2.5">PHÂN KHỐI THCS</span>
             {['6', '7', '8', '9'].map(g => (
               <button 
@@ -2628,7 +2628,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
           </div>
 
           {/* Anti-cheat status center */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-150 shadow-sm space-y-3">
+          <div className="premium-card rounded-2xl p-4 space-y-3">
             <span className="block text-[10px] font-black text-slate-400 uppercase tracking-widest px-2.5">GIÁM SÁT THI ĐẤU</span>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[11px] font-bold">
@@ -2663,7 +2663,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               {/* Practice Configuration Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
-                <div className="bg-white p-6 rounded-2xl border border-slate-150 shadow-sm flex flex-col justify-between space-y-4">
+                <div className="premium-card p-6 rounded-2xl flex flex-col justify-between space-y-4">
                   <div className="space-y-1">
                     <span className="bg-indigo-50 text-indigo-700 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded">CHẾ ĐỘ TỰ LUYỆN</span>
                     <h4 className="font-black text-slate-900 text-sm mt-2">🎯 Ôn luyện Lịch Sử & Địa Lí nhanh</h4>
@@ -2736,7 +2736,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                   </button>
                 </div>
 
-                <div className="bg-white p-6 rounded-2xl border border-slate-150 shadow-sm flex flex-col justify-between space-y-4">
+                <div className="premium-card p-6 rounded-2xl flex flex-col justify-between space-y-4">
                   <div className="space-y-1">
                     <span className="bg-purple-50 text-purple-700 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded">HỆ LIÊN KHÓA HỌC PHẦN</span>
                     <h4 className="font-black text-slate-900 text-sm mt-3">🌟 Trận lội ngược dòng liên khóa học</h4>
@@ -2915,7 +2915,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
-                <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+                <div className="premium-card p-5 rounded-2xl space-y-4">
                   <h3 className="font-black text-slate-900 text-xs sm:text-sm flex items-center gap-2">
                     <span>🔑</span> VÀO PHÒNG BẰNG MÃ SỐ
                   </h3>
@@ -2939,7 +2939,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                   </div>
                 </div>
 
-                <div className="md:col-span-2 bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+                <div className="md:col-span-2 premium-card p-5 rounded-2xl space-y-4">
                   <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
                     <h3 className="font-black text-slate-950 text-xs sm:text-sm">🏫 DANH SÁCH CÁC PHÒNG ĐẤU ACTIVE ({examRooms.length})</h3>
                     {examRooms.length > 0 && (
@@ -3045,7 +3045,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                 </div>
               )}
 
-              <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+              <div className="premium-card p-5 rounded-2xl space-y-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b pb-3 border-slate-100">
                   <div className="flex flex-col md:flex-row items-start md:items-center gap-3">
                     <div className="flex flex-wrap gap-1">
@@ -3193,7 +3193,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               </div>
 
               {/* Data Import / Export managers */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+              <div className="premium-card p-5 rounded-2xl space-y-4">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-100 pb-3">
                   <div className="text-left">
                     <span className="block text-xs font-black text-slate-900 uppercase tracking-tight">📁 Quản lý kho tàng học liệu</span>
@@ -3331,7 +3331,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               </div>
 
               {/* Advanced creation form */}
-              <form onSubmit={handleSaveQuestion} className="bg-white rounded-2xl p-6 border border-slate-150 shadow-sm space-y-6">
+              <form onSubmit={handleSaveQuestion} className="premium-card rounded-2xl p-6 space-y-6">
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -3610,8 +3610,8 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               ) : (
                 /* BẢNG ĐIỀU KHIỂN CHÍNH THỨC CỦA ADMIN (ĐÃ LOGGED IN) */
                 <>
-                  <div className="bg-white rounded-2xl p-4 border border-slate-150 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="text-left flex items-center gap-3">
+                  <div className="premium-card rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-left flex items-center gap-3 font-display">
                       <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center font-display font-black text-base shadow-inner">
                         🛡️
                       </div>
@@ -3689,7 +3689,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                     </div>
                   </div>
 
-                  <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+                  <div className="premium-card p-5 rounded-2xl space-y-4">
                     <span className="block text-xs font-black text-slate-900 uppercase tracking-wider font-display">Simulated Live Users ({liveUsers.length})</span>
                     <div className="space-y-2">
                       {liveUsers.map(u => (
@@ -3713,7 +3713,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                   </div>
 
                   {/* Cổng điều chỉnh Bảo trì Hệ thống */}
-                  <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4 animate-fadeIn">
+                  <div className="premium-card p-5 rounded-2xl space-y-4 animate-fadeIn">
                     <div className="flex items-center gap-2 pb-2 border-b border-slate-100 font-display">
                       <Lock className="w-4 h-4 text-rose-500 animate-pulse" />
                       <span className="block text-xs font-black text-rose-600 uppercase tracking-wider">CẤU HÌNH BẢO TRÌ HỆ THỐNG</span>
@@ -3774,8 +3774,8 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               )}
 
               {activeAdminTab === 'questions' && (
-                <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-slate-100">
+                <div className="premium-card p-5 rounded-2xl space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 border-slate-100 font-display">
                     <div>
                       <span className="block text-xs font-black text-slate-900 uppercase tracking-wider font-display">Danh mục câu hỏi hiện hoạt</span>
                       <span className="block text-[10px] text-slate-450 uppercase font-black">
@@ -3944,8 +3944,8 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               )}
 
               {activeAdminTab === 'school_class' && (
-                <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4 animate-fadeIn">
-                  <h3 className="text-xs font-black uppercase text-slate-900">Mạng lưới trường THCS liên kết ({schoolsList.length})</h3>
+                <div className="premium-card p-5 rounded-2xl space-y-4 animate-fadeIn">
+                  <h3 className="text-xs font-black uppercase text-slate-900 font-display">Mạng lưới trường THCS liên kết ({schoolsList.length})</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
                       <span className="block text-[11px] font-black text-slate-500 uppercase">Whitelist trường học mới</span>
@@ -3990,7 +3990,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                )}
 
                {activeAdminTab === 'email_perms' && (
-                 <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+                 <div className="premium-card p-5 rounded-2xl space-y-4">
                    <h3 className="text-xs font-black uppercase text-slate-900">Danh sách Whitelist Email Admin ({emailWhitelist.length})</h3>
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
@@ -4047,7 +4047,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
            {currentView === 'exam-room' && activeExam && (
              <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
                
-               <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+               <div className="premium-card p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
                  <div className="text-left space-y-0.5">
                    <span className="bg-indigo-50 text-indigo-700 text-[9px] font-black px-2.5 py-0.5 rounded uppercase tracking-wider font-display">TRẬN ĐẤU CĂNG THẲNG LỚP {activeExam.grade}</span>
                    <h2 className="text-base font-black text-slate-900 leading-tight mt-1">{activeExam.title}</h2>
@@ -4059,7 +4059,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                </div>
 
                {/* Dynamic question wrapper */}
-               <div className="bg-white p-6 rounded-2xl border border-slate-150 shadow-md space-y-6">
+               <div className="premium-card p-6 rounded-2xl space-y-6">
                  
                  <div className="flex justify-between items-center text-[10px] font-black text-indigo-600 uppercase tracking-widest border-b pb-2 border-slate-100">
                    <span>MÃ PHÒNG CHỐNG GIAN LẬN: SECURE_WAF_K{activeExam.grade}</span>
