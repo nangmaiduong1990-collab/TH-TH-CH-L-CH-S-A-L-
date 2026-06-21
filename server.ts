@@ -662,7 +662,7 @@ app.delete("/api/exam-rooms/:id", async (req, res) => {
   const client = getSupabaseClient();
   if (client) {
     try {
-      const { error } = await client.from("exam_rooms").delete().eq("id", mappedId);
+      const { error } = await client.from("exam_rooms").delete().in("id", [mappedId, id]);
       if (error) {
         console.error("Delete exam room error:", error);
       }

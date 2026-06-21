@@ -1171,49 +1171,59 @@ export default function App() {
     showToast(`🚀 Khởi động Trận Lội Ngược Dòng - Lớp ${subClass}! Giải nhanh & Giật điểm kịch tính!`, 'success');
   };
 
-  const handleClearAllRooms = async () => {
-    const confirmClear = window.confirm("⚠️ Bạn có chắc chắn muốn xóa TOÀN BỘ danh sách phòng đấu active không? Hành động này sẽ xóa dữ liệu trên cả máy chủ và thiết bị!");
-    if (!confirmClear) return;
-
-    try {
-      showToast("⏳ Đang xóa toàn bộ phòng đấu...", "info");
-      const res = await fetch('/api/exam-rooms', {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        setExamRooms([]);
-        localStorage.setItem('quizmaster_exam_rooms', '[]');
-        showToast("🧹 Đã xóa toàn bộ danh sách phòng đấu thành công!", "success");
-      } else {
-        showToast("❌ Không thể xóa phòng đấu từ máy chủ!", "error");
+  const handleClearAllRooms = () => {
+    setDialogConfig({
+      title: "⚠️ XÓA TOÀN BỘ PHÒNG ĐẤU",
+      message: "Bạn có chắc chắn muốn xóa TOÀN BỘ danh sách phòng đấu active không? Hành động này sẽ xóa dữ liệu trên cả máy chủ và thiết bị!",
+      onCancel: () => setDialogConfig(null),
+      onConfirm: async () => {
+        setDialogConfig(null);
+        try {
+          showToast("⏳ Đang xóa toàn bộ phòng đấu...", "info");
+          const res = await fetch('/api/exam-rooms', {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            setExamRooms([]);
+            localStorage.setItem('quizmaster_exam_rooms', '[]');
+            showToast("🧹 Đã xóa toàn bộ danh sách phòng đấu thành công!", "success");
+          } else {
+            showToast("❌ Không thể xóa phòng đấu từ máy chủ!", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showToast("❌ Lỗi kết nối khi xóa phòng đấu!", "error");
+        }
       }
-    } catch (err) {
-      console.error(err);
-      showToast("❌ Lỗi kết nối khi xóa phòng đấu!", "error");
-    }
+    });
   };
 
-  const handleDeleteRoom = async (roomId: string) => {
-    const confirmDelete = window.confirm("⚠️ Bạn có chắc chắn muốn xóa phòng đấu này không?");
-    if (!confirmDelete) return;
-
-    try {
-      showToast("⏳ Đang xóa phòng đấu...", "info");
-      const res = await fetch(`/api/exam-rooms/${roomId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        const remaining = examRooms.filter((r: any) => r.id !== roomId);
-        setExamRooms(remaining);
-        localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(remaining));
-        showToast("🗑️ Đã xóa phòng đấu thành công!", "success");
-      } else {
-        showToast("❌ Lỗi khi xóa phòng đấu từ máy chủ!", "error");
+  const handleDeleteRoom = (roomId: string) => {
+    setDialogConfig({
+      title: "🗑️ XÓA PHÒNG ĐẤU",
+      message: "Bạn có chắc chắn muốn xóa phòng đấu này không?",
+      onCancel: () => setDialogConfig(null),
+      onConfirm: async () => {
+        setDialogConfig(null);
+        try {
+          showToast("⏳ Đang xóa phòng đấu...", "info");
+          const res = await fetch(`/api/exam-rooms/${roomId}`, {
+            method: 'DELETE'
+          });
+          if (res.ok) {
+            const remaining = examRooms.filter((r: any) => r.id !== roomId);
+            setExamRooms(remaining);
+            localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(remaining));
+            showToast("🗑️ Đã xóa phòng đấu thành công!", "success");
+          } else {
+            showToast("❌ Lỗi khi xóa phòng đấu từ máy chủ!", "error");
+          }
+        } catch (err) {
+          console.error(err);
+          showToast("❌ Lỗi kết nối khi xóa phòng đấu!", "error");
+        }
       }
-    } catch (err) {
-      console.error(err);
-      showToast("❌ Lỗi kết nối khi xóa phòng đấu!", "error");
-    }
+    });
   };
 
   const handleJoinPrivateRoom = (e, directCode) => {
