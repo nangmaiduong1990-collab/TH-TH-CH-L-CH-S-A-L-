@@ -1,6 +1,6 @@
 {
   "name": "QuizMaster Lịch Sử & Địa Lí THCS",
-  "description": "Hệ thống khảo thí, ôn luyện trắc nghiệm môn Lịch sử và Địa lí dành cho khối THCS tích hợp AI và Giọng nói.",
+  "description": "Hệ thống khảo thí, ôn luyện trắc nghiệm và đấu trường sân chơi tương tác môn Lịch sử và Địa lí dành cho khối THCS tích hợp AI và Giọng nói học đường.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

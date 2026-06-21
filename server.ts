@@ -675,6 +675,112 @@ app.delete("/api/exam-rooms/:id", async (req, res) => {
   res.json({ success: true });
 });
 
+// INTERACTIVE GAMES ENDPOINTS
+const DEFAULT_GAMES = [
+  {
+    id: "g-timeline-6",
+    code: "TIMELINE_G6",
+    title: "Sắp xếp dòng lịch sử",
+    description: "Sắp xếp các sự kiện lịch sử Ai Cập, Lưỡng Hà và thời kỳ dựng nước cổ xưa của dân tộc Việt Nam theo trình tự thời gian.",
+    grade: "6",
+    subject: "Lịch sử",
+    moduleId: "TimelineGame",
+    isSystem: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "g-map-7",
+    code: "MAP_G7",
+    title: "Bản đồ địa lý bí ẩn",
+    description: "Nhận dạng các kỳ quan thiên nhiên, dòng sông vĩ đại và ghép nối chính xác vào châu lục tương ứng trên bản đồ thế giới.",
+    grade: "7",
+    subject: "Địa lí",
+    moduleId: "MapWondersGame",
+    isSystem: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "g-relic-8",
+    code: "RELIC_G8",
+    title: "Giải mã di sản Việt Nam",
+    description: "Thử tài kết nối thông tin di sản, đền tháp và thương cảng lịch sử của Việt Nam qua các triều đại lịch sử.",
+    grade: "8",
+    subject: "Lịch sử",
+    moduleId: "RelicMatchGame",
+    isSystem: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "g-survival-9",
+    code: "SURVIVAL_G9",
+    title: "Chinh phục địa lý Việt Nam",
+    description: "Điều khiển đoàn tàu thám hiểm vượt qua 5 vùng địa lý đặc trưng đất nước thông qua bộ câu hỏi tài nguyên thiên nhiên học kỳ lớp 9.",
+    grade: "9",
+    subject: "Địa lí",
+    moduleId: "ClimateSurvivalGame",
+    isSystem: true,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: "g-trivia-all",
+    code: "TRIVIA_G69",
+    title: "Đấu trường trí tuệ tốc độ",
+    description: "Chạy đua bấm giờ trả lời trắc nghiệm Lịch sử và Địa lý tổng hợp của các khối lớp THCS dưới áp lực thời gian dồn dập.",
+    grade: "6-9",
+    subject: "Tổng hợp",
+    moduleId: "TriviaDuelGame",
+    isSystem: true,
+    createdAt: new Date().toISOString()
+  }
+];
+
+app.get("/api/games", (req, res) => {
+  const local = loadLocalDb();
+  if (!local.interactiveGames || local.interactiveGames.length === 0) {
+    local.interactiveGames = DEFAULT_GAMES;
+    saveLocalDb(local);
+  }
+  res.json(local.interactiveGames);
+});
+
+app.post("/api/games", (req, res) => {
+  const game = req.body;
+  if (!game.id) {
+    game.id = "game_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+  }
+  if (!game.createdAt) {
+    game.createdAt = new Date().toISOString();
+  }
+
+  const local = loadLocalDb();
+  if (!local.interactiveGames) {
+    local.interactiveGames = [...DEFAULT_GAMES];
+  }
+
+  // Remove existing if editing
+  local.interactiveGames = local.interactiveGames.filter((g: any) => g.id !== game.id);
+  local.interactiveGames.push(game);
+  saveLocalDb(local);
+  res.json({ success: true, game });
+});
+
+app.delete("/api/games/:id", (req, res) => {
+  const { id } = req.params;
+  const local = loadLocalDb();
+  if (!local.interactiveGames) {
+    local.interactiveGames = [...DEFAULT_GAMES];
+  }
+
+  const game = local.interactiveGames.find((g: any) => g.id === id);
+  if (game && game.isSystem) {
+    return res.status(400).json({ success: false, message: "Không thể xóa trò chơi hệ thống!" });
+  }
+
+  local.interactiveGames = local.interactiveGames.filter((g: any) => g.id !== id);
+  saveLocalDb(local);
+  res.json({ success: true });
+});
+
 // EXAM HISTORY LOGS ENDPOINTS
 app.get("/api/exam-history-logs", async (req, res) => {
   const client = getSupabaseClient();

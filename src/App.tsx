@@ -4,9 +4,10 @@ import {
   X, AlertCircle, FileText, Clock, Settings, Users, Plus, Download, 
   Upload, Volume2, ArrowRight, ArrowLeft, ShieldCheck, Award, 
   Calendar, School, Mail, RefreshCw, Key, HelpCircle, CheckSquare, Lock,
-  Pencil
+  Pencil, Gamepad2
 } from 'lucide-react';
 import { get40QuestionsForGrade } from './question_bank';
+import GameSpace from './components/games/GameSpace';
 
 const extractPdfTextClientSide = async (file: File): Promise<string> => {
   return new Promise(async (resolve, reject) => {
@@ -2461,6 +2462,12 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
             >
               Bảng Vinh Danh
             </button>
+            <button
+              onClick={() => setCurrentView('games')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors ${currentView === 'games' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              🎮 Sân Chơi Game
+            </button>
             {isAdminLoggedIn && (
               <>
                 <button
@@ -2519,6 +2526,12 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
           className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-[10px] font-black transition-colors shrink-0 ${currentView === 'leaderboard' ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-600'}`}
         >
           Vinh Danh
+        </button>
+        <button
+          onClick={() => setCurrentView('games')}
+          className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-[10px] font-black transition-colors shrink-0 ${currentView === 'games' ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}
+        >
+          🎮 Trò chơi
         </button>
         {isAdminLoggedIn && (
           <>
@@ -2615,6 +2628,12 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
               className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-bold transition-colors ${currentView === 'leaderboard' ? 'bg-orange-50 text-orange-600' : 'text-slate-600 hover:bg-slate-50'}`}
             >
               <Trophy className="w-4 h-4" /> Bảng Vinh Danh
+            </button>
+            <button 
+              onClick={() => setCurrentView('games')}
+              className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-bold transition-colors ${currentView === 'games' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              <Gamepad2 className="w-4 h-4" /> Sân Chơi Tương Tác
             </button>
           </div>
 
@@ -4054,7 +4073,14 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
            )}
 
            {/* VIEW: EXAM PLAY ROOM (Thực luyện thi đấu thực tế) */}
-           {currentView === 'exam-room' && activeExam && (
+           {currentView === 'games' && (
+              <GameSpace 
+                isAdminLoggedIn={isAdminLoggedIn} 
+                showToast={showToast} 
+              />
+            )}
+
+            {currentView === 'exam-room' && activeExam && (
              <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
                
                <div className="premium-card p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
