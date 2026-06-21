@@ -1279,39 +1279,94 @@ export default function App() {
     showToast(`🚀 Khởi động Trận Lội Ngược Dòng - Lớp ${subClass}! Giải nhanh & Giật điểm kịch tính!`, 'success');
   };
 
+  const handleClearAllRooms = async () => {
+    const confirmClear = window.confirm("⚠️ Bạn có chắc chắn muốn xóa TOÀN BỘ danh sách phòng đấu active không? Hành động này sẽ xóa dữ liệu trên cả máy chủ và thiết bị!");
+    if (!confirmClear) return;
+
+    try {
+      showToast("⏳ Đang xóa toàn bộ phòng đấu...", "info");
+      const res = await fetch('/api/exam-rooms', {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setExamRooms([]);
+        localStorage.setItem('quizmaster_exam_rooms', '[]');
+        showToast("🧹 Đã xóa toàn bộ danh sách phòng đấu thành công!", "success");
+      } else {
+        showToast("❌ Không thể xóa phòng đấu từ máy chủ!", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("❌ Lỗi kết nối khi xóa phòng đấu!", "error");
+    }
+  };
+
+  const handleDeleteRoom = async (roomId: string) => {
+    const confirmDelete = window.confirm("⚠️ Bạn có chắc chắn muốn xóa phòng đấu này không?");
+    if (!confirmDelete) return;
+
+    try {
+      showToast("⏳ Đang xóa phòng đấu...", "info");
+      const res = await fetch(`/api/exam-rooms/${roomId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        const remaining = examRooms.filter((r: any) => r.id !== roomId);
+        setExamRooms(remaining);
+        localStorage.setItem('quizmaster_exam_rooms', JSON.stringify(remaining));
+        showToast("🗑️ Đã xóa phòng đấu thành công!", "success");
+      } else {
+        showToast("❌ Lỗi khi xóa phòng đấu từ máy chủ!", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("❌ Lỗi kết nối khi xóa phòng đấu!", "error");
+    }
+  };
+
   const handleJoinPrivateRoom = (e, directCode) => {
     if (e) e.preventDefault();
+    if (!checkProfileInitialized()) return;
+
     let finalCode = directCode || roomCodeInput;
-    
-    if (directCode) {
-      const promptedCode = prompt(`🔑 Vui lòng nhập chính xác Mã phòng thi đấu trực tuyến (${directCode}) do giáo viên cung cấp để xác thực quyền vào thi của bạn:`, '');
-      if (!promptedCode || promptedCode.trim().toUpperCase() !== directCode.toUpperCase()) {
-        showToast('❌ Sai mã phòng thi đấu trực tuyến! Vui lòng chỉ định mã đúng do giáo viên cung cấp.', 'error');
-        return;
-      }
-      finalCode = promptedCode;
-    }
-    
-    if (!finalCode.trim()) {
+    if (!finalCode || !finalCode.trim()) {
       showToast('Vui lòng nhập mã phòng đấu trực tuyến của bạn!', 'warning');
       return;
     }
+
     const cleanCode = finalCode.toUpperCase().trim();
-    const matched = examRooms.find(r => r.code === cleanCode);
+    // Case-insensitive search on room code
+    const matched = examRooms.find(r => r.code && r.code.toUpperCase().trim() === cleanCode);
+    
     if (!matched) {
       showToast(`❌ Không tồn tại phòng ôn tập có mã: "${cleanCode}"!`, 'error');
       return;
     }
+
+    // Get the target question count or default to 40
+    const targetCount = matched.questions || 40;
     const filtered = questions.filter(q => q.grade === matched.grade);
+    
+    let finalQuestions = [];
+    if (filtered.length >= targetCount) {
+      // Shuffle and pick targetCount
+      finalQuestions = [...filtered].sort(() => Math.random() - 0.5).slice(0, targetCount);
+    } else {
+      // Robust fallback from standard high-quality bank of 1000+ questions
+      const bankQs = get40QuestionsForGrade(matched.grade);
+      finalQuestions = bankQs.slice(0, targetCount);
+    }
+
     setActiveExam({
       title: `Đấu Trường: ${matched.title}`,
-      questionsList: filtered.length > 0 ? filtered : questions,
+      questionsList: finalQuestions,
       currentIdx: 0,
       answers: {},
       timeLeftOriginal: matched.duration * 60,
       timeLeft: matched.duration * 60,
       isPractice: false,
-      grade: matched.grade
+      grade: matched.grade,
+      code: matched.code
     });
     setCurrentView('exam-room');
     showToast(`🔑 Bạn đã bước vào phòng đấu ${matched.title}!`, 'success');
@@ -1670,6 +1725,11 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
   };
 
   const handleDeleteLeaderboardEntry = (id: string) => {
+    if (!isAdminLoggedIn) {
+      showToast("❌ Chỉ chủ tài khoản / Quản trị viên mới có quyền xóa học sinh khỏi bảng vinh danh!", "error");
+      return;
+    }
+
     setDialogConfig({
       title: "Xác nhận xóa thành tích",
       message: "Bạn có chắc chắn muốn xóa học sinh này khỏi bảng xếp hạng vinh danh không? Hành động này không thể hoàn tác.",
@@ -2988,14 +3048,35 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                 </div>
 
                 <div className="md:col-span-2 bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
-                  <h3 className="font-black text-slate-900 text-xs sm:text-sm">🏫 DANH SÁCH CÁC PHÒNG ĐẤU ACTIVE ({examRooms.length})</h3>
+                  <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3">
+                    <h3 className="font-black text-slate-950 text-xs sm:text-sm">🏫 DANH SÁCH CÁC PHÒNG ĐẤU ACTIVE ({examRooms.length})</h3>
+                    {examRooms.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleClearAllRooms}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 font-black text-[10px] rounded-lg border border-rose-200 transition-all uppercase tracking-wider cursor-pointer shadow-sm active:scale-95"
+                      >
+                        <Trash className="w-3.5 h-3.5" /> Xóa toàn bộ
+                      </button>
+                    )}
+                  </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {examRooms.map(room => (
                       <div key={room.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 hover:border-indigo-300 transition-colors">
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] text-slate-400 font-black uppercase tracking-wider">MÃ: {room.code}</span>
-                          <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase px-2 py-0.5 rounded">ONLINE</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="bg-emerald-100 text-emerald-800 text-[8px] font-black uppercase px-2 py-0.5 rounded">ONLINE</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRoom(room.id)}
+                              className="text-slate-500 hover:text-rose-600 transition-colors p-1 rounded hover:bg-rose-50 border border-transparent hover:border-rose-100 cursor-pointer"
+                              title="Xóa phòng đấu này"
+                            >
+                              <Trash className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
                         <h4 className="font-extrabold text-slate-900 text-xs leading-snug line-clamp-2 h-8 min-h-[32px]">{room.title}</h4>
                         <div className="grid grid-cols-3 gap-1 text-[9px] font-black text-indigo-700 text-center uppercase tracking-widest">
@@ -3142,7 +3223,7 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                         <th className="p-3">Đơn Vị Trường Lớp</th>
                         <th className="p-3 text-center">Thời Gian</th>
                         <th className="p-3 text-right pr-5">Điểm Số</th>
-                        <th className="p-3 text-center w-20">Xóa</th>
+                        {isAdminLoggedIn && <th className="p-3 text-center w-20">Xóa</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -3161,21 +3242,23 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                           <td className="p-3 text-slate-500 text-[11px]">{item.class}</td>
                           <td className="p-3 text-center text-slate-400 text-[11px] font-mono">{item.time}</td>
                           <td className="p-3 text-right pr-5 text-indigo-600 font-extrabold text-sm font-mono">{item.score}đ</td>
-                          <td className="p-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteLeaderboardEntry(item.id)}
-                              className="text-rose-600 hover:text-rose-800 p-1.5 rounded-lg hover:bg-rose-50 transition-colors inline-flex items-center justify-center"
-                              title="Xóa học sinh này khỏi bảng vinh danh"
-                            >
-                              <Trash className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
+                          {isAdminLoggedIn && (
+                            <td className="p-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteLeaderboardEntry(item.id)}
+                                className="text-rose-600 hover:text-rose-800 p-1.5 rounded-lg hover:bg-rose-50 transition-colors inline-flex items-center justify-center cursor-pointer"
+                                title="Xóa học sinh này khỏi bảng vinh danh"
+                              >
+                                <Trash className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                       {filteredLeaderboard.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="p-8 text-center text-slate-400 italic">Chưa có kết quả vinh danh ghi nhận khối thi này.</td>
+                          <td colSpan={isAdminLoggedIn ? 6 : 5} className="p-8 text-center text-slate-400 italic">Chưa có kết quả vinh danh ghi nhận khối thi này.</td>
                         </tr>
                       )}
                     </tbody>
@@ -4104,8 +4187,8 @@ Chúc các em đạt thành tích rực rỡ và lọt Top Bảng Vàng! 🏆`;
                      </h3>
                      <button
                        type="button"
-                       onClick={() => handleDownloadPdf()}
-                       className="flex items-center gap-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-extrabold text-[11px] px-3 py-1.5 rounded-lg active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm"
+                       onClick={() => isAdminLoggedIn && handleDownloadPdf()}
+                       className={`flex items-center gap-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-extrabold text-[11px] px-3 py-1.5 rounded-lg active:scale-95 transition-all shrink-0 cursor-pointer shadow-sm ${!isAdminLoggedIn ? 'hidden' : ''}`}
                      >
                        <FileText className="w-3.5 h-3.5 text-red-600 animate-pulse" /> Tải đề PDF
                      </button>

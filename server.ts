@@ -691,6 +691,42 @@ app.post("/api/exam-rooms", async (req, res) => {
   res.json({ success: true, id: room.id });
 });
 
+app.delete("/api/exam-rooms", async (req, res) => {
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error } = await client.from("exam_rooms").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      if (error) {
+        console.error("Delete all exam rooms error:", error);
+      }
+    } catch (_) {}
+  }
+
+  const local = loadLocalDb();
+  local.examRooms = [];
+  saveLocalDb(local);
+  res.json({ success: true });
+});
+
+app.delete("/api/exam-rooms/:id", async (req, res) => {
+  const { id } = req.params;
+  const mappedId = convertToUUID(id);
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      const { error } = await client.from("exam_rooms").delete().eq("id", mappedId);
+      if (error) {
+        console.error("Delete exam room error:", error);
+      }
+    } catch (_) {}
+  }
+
+  const local = loadLocalDb();
+  local.examRooms = local.examRooms.filter((r: any) => convertToUUID(r.id) !== mappedId && r.id !== id);
+  saveLocalDb(local);
+  res.json({ success: true });
+});
+
 // EXAM HISTORY LOGS ENDPOINTS
 app.get("/api/exam-history-logs", async (req, res) => {
   const client = getSupabaseClient();
